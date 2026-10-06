@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Математика в клетку</title>
+<meta name="description" content="Школьная математика 5–11 классов по темам и уровням сложности: теория, примеры и тренажёр с проверкой ответов.">
+<script>try{var _t=localStorage.getItem('shm.theme');if(_t==='light'||_t==='dark')document.documentElement.setAttribute('data-theme',_t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Тетрадь в клетку: клетчатый фон, красная линия полей слева, рукописные заголовки, «вклеенные» листы-карточки */
+:root{
+  --paper:#fbfbf7;         /* фон тетради */
+  --grid:rgba(52,110,190,.14);
+  --margin:#e0524a;        /* красные поля */
+  --sheet:#ffffff;         /* карточки */
+  --sheet-2:#f3f5fa;
+  --ink:#1c2333;
+  --muted:#586178;
+  --line:#d7dce7;
+  --accent:#2453b8;        /* «синяя ручка» */
+  --accent-ink:#ffffff;
+  --accent-soft:#e6edfb;
+  --l1:#1d7343; --l1-bg:#e3f3e9;
+  --l2:#a24f00; --l2-bg:#fdeedb;
+  --l3:#a8124b; --l3-bg:#fbe3ec;
+  --ok:#1d7343; --ok-bg:#e3f3e9;
+  --bad:#b3261e; --bad-bg:#fbe6e4;
+  --shadow:0 1px 2px rgba(25,40,80,.07),0 6px 18px rgba(25,40,80,.06);
+  --f-hand:"Caveat","Segoe Print","Comic Sans MS",cursive;
+  --f-body:"PT Sans","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --f-math:"PT Serif","Cambria Math",Cambria,"Times New Roman",serif;
+  --cell:24px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#151922;--grid:rgba(120,160,235,.075);--margin:#c4504a;--sheet:#1e2430;--sheet-2:#252c3a;
+  --ink:#e6e9f0;--muted:#a3acbd;--line:#343c4d;--accent:#8db0ff;--accent-ink:#0e1424;--accent-soft:rgba(141,176,255,.14);
+  --l1:#63cf8f;--l1-bg:rgba(99,207,143,.13);--l2:#f2a75c;--l2-bg:rgba(242,167,92,.13);--l3:#f47ca8;--l3-bg:rgba(244,124,168,.13);
+  --ok:#63cf8f;--ok-bg:rgba(99,207,143,.13);--bad:#ff8a80;--bad-bg:rgba(255,138,128,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#151922;--grid:rgba(120,160,235,.075);--margin:#c4504a;--sheet:#1e2430;--sheet-2:#252c3a;
+  --ink:#e6e9f0;--muted:#a3acbd;--line:#343c4d;--accent:#8db0ff;--accent-ink:#0e1424;--accent-soft:rgba(141,176,255,.14);
+  --l1:#63cf8f;--l1-bg:rgba(99,207,143,.13);--l2:#f2a75c;--l2-bg:rgba(242,167,92,.13);--l3:#f47ca8;--l3-bg:rgba(244,124,168,.13);
+  --ok:#63cf8f;--ok-bg:rgba(99,207,143,.13);--bad:#ff8a80;--bad-bg:rgba(255,138,128,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:17px/1.6 var(--f-body);color:var(--ink);background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:var(--cell) var(--cell);min-height:100vh}
+body::before{content:"";position:fixed;top:0;bottom:0;left:var(--mx);width:2px;background:var(--margin);opacity:.75;pointer-events:none;z-index:0}
+:root{--mx:max(14px,calc(50% - 600px))}
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding-inline:max(30px,calc(var(--mx) - (50% - 600px) + 30px)) 20px}
+@media (max-width:1248px){.wrap{padding-left:calc(var(--mx) + 18px);padding-right:16px}}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--sheet);padding:8px 12px;z-index:10}
+.skip:focus{left:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;padding-block:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);margin-right:auto}
+.logo{width:40px;height:40px;border:2px solid var(--ink);border-radius:8px;display:grid;place-items:center;font:italic 700 20px/1 var(--f-math);background:var(--sheet);transform:rotate(-4deg)}
+.logo sup{font-size:.6em}
+.brand b{font:700 28px/1 var(--f-hand)}
+.brand small{display:block;font-size:13px;color:var(--muted);line-height:1.2}
+.theme{display:flex;border:1px solid var(--line);border-radius:999px;background:var(--sheet);padding:3px}
+.theme button{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;padding:4px 12px;border-radius:999px;cursor:pointer}
+.theme button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+@media (max-width:520px){.theme .tl{display:none}.brand small{display:none}}
+
+main{padding-block:28px 48px;outline:none}
+h1,h2{font-family:var(--f-hand);font-weight:700;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(40px,6vw,58px)}
+h2{font-size:34px}
+h3{font-size:19px;margin:0}
+.lead{font-size:19px;color:var(--muted);max-width:60ch;margin:10px 0 0}
+
+/* hero + summary */
+.hero{display:grid;grid-template-columns:1fr minmax(260px,340px);gap:24px;align-items:end;margin-bottom:28px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.summary{padding:18px 20px}
+.summary .big{font:700 46px/1 var(--f-hand)}
+.summary .big span{font-size:26px;color:var(--muted)}
+.bar{height:10px;background:var(--sheet-2);border-radius:99px;overflow:hidden;margin:10px 0 12px;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--muted)}
+
+/* grade tabs */
+.grades{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:0;list-style:none}
+.grades a{display:flex;flex-direction:column;align-items:center;min-width:76px;padding:8px 12px 6px;border:1.5px solid var(--line);border-radius:10px;background:var(--sheet);text-decoration:none;color:var(--ink)}
+.grades a b{font:700 30px/1 var(--f-hand)}
+.grades a small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.grades a[aria-current="page"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.grades a[aria-current="page"] small{color:inherit;opacity:.85}
+.grades a:hover:not([aria-current]){border-color:var(--accent)}
+
+/* topic cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:8px;padding:18px 18px 16px;text-decoration:none;color:var(--ink);transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.card .num{font:700 22px/1 var(--f-hand);color:var(--margin)}
+.card p{margin:0;color:var(--muted);font-size:15px;line-height:1.45;flex:1}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:2px 9px;border-radius:99px;color:var(--lc);background:var(--lb);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill .dot{width:8px;height:8px;border-radius:50%;border:2px solid var(--lc)}
+.pill.done .dot{background:var(--lc)}
+.l1{--lc:var(--l1);--lb:var(--l1-bg)}.l2{--lc:var(--l2);--lb:var(--l2-bg)}.l3{--lc:var(--l3);--lb:var(--l3-bg)}
+
+/* topic page */
+.crumbs{font-size:15px;color:var(--muted);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px}
+.crumbs a{color:var(--muted)}
+.topic-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;margin-bottom:18px}
+.topic-head .pills{margin-bottom:6px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:22px;overflow-x:auto;scrollbar-width:none}
+@media (max-width:520px){.tabs a{padding:10px 10px}}
+.tabs a{padding:10px 16px;text-decoration:none;color:var(--muted);font-weight:700;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tabs a[aria-current="page"]{color:var(--ink);border-color:var(--margin)}
+.tabs a:hover{color:var(--ink)}
+.content{max-width:780px}
+.theory{padding:24px 26px}
+.theory h3{font:700 26px/1.2 var(--f-hand);margin:18px 0 6px;color:var(--accent)}
+.theory h3:first-child{margin-top:0}
+.theory p,.theory li{max-width:66ch}
+.theory p{margin:8px 0}
+.theory ul,.theory ol{padding-left:22px;margin:8px 0}
+.rule{background:var(--sheet-2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;margin:12px 0;font-family:var(--f-math);font-size:18px;overflow-x:auto}
+.rule div+div{margin-top:6px}
+.note{border-left:3px solid var(--margin);padding:4px 0 4px 12px;color:var(--muted);margin:12px 0}
+.next{margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:700 16px/1 var(--f-body);padding:12px 18px;border-radius:10px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:hover:not(:disabled){filter:brightness(1.07)}
+
+.examples{display:grid;gap:18px}
+.ex{padding:20px 24px}
+.ex .tag{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.task{font-size:18px;margin:10px 0 0}
+.expr{font-family:var(--f-math);font-size:clamp(20px,3vw,25px);margin:12px 0 4px;overflow-x:auto;padding:4px 0;line-height:1.9}
+.sol{margin:14px 0 0;padding:0 0 0 0;list-style:none;counter-reset:s;display:grid;gap:6px}
+.sol li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:6px;line-height:1.9;min-width:0}
+.sol li::before{content:counter(s);font:700 20px/1.5 var(--f-hand);color:var(--margin)}
+.sol li>span{min-width:0;overflow-x:auto}
+.answer{margin-top:10px;font-weight:700}
+.answer .m{font-weight:400}
+
+/* math */
+.m,.task,.sol,.answer,.rule{font-variant-numeric:lining-nums}
+.m{font-family:var(--f-math)}
+.task i,.sol i,.rule i,.expr i,.answer i,.theory i{font-family:var(--f-math)}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 .12em;font-size:.88em;line-height:1.2}
+.fr>span:first-child{border-bottom:1.4px solid currentColor;padding:0 .2em .05em}
+.fr>span:last-child{padding:.05em .2em 0}
+.sq{white-space:nowrap}.sq>span{border-top:1.4px solid currentColor;padding:0 .12em;margin-left:.04em}
+.sys{display:inline-flex;align-items:center;vertical-align:middle}
+.sys-b{font-size:2.5em;line-height:1;font-weight:400;transform:scaleX(.6);margin-right:-.05em}
+.sys-r{display:flex;flex-direction:column;line-height:1.5}
+.int{display:inline-flex;align-items:center;vertical-align:middle;margin-right:.1em}
+.int-s{font-size:1.8em;line-height:1}
+.int-l{display:flex;flex-direction:column;justify-content:space-between;font-size:.62em;height:2.7em;margin-left:-.05em;line-height:1}
+sup,sub{line-height:0}
+
+/* trainer */
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+@media (max-width:720px){.levels{grid-template-columns:1fr}}
+.lvl{display:flex;flex-direction:column;gap:4px;text-align:left;font:inherit;color:var(--ink);padding:14px 16px;border-radius:12px;border:2px solid var(--line);background:var(--sheet);cursor:pointer;text-decoration:none}
+.lvl:hover{border-color:var(--lc)}
+.lvl[aria-current="true"]{border-color:var(--lc);background:var(--lb)}
+.lvl .ln{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;color:var(--lc);font-size:17px}
+.lvl small{color:var(--muted);font-size:14px;line-height:1.4}
+.dots{display:flex;gap:4px;margin-top:4px}
+.dots i{width:12px;height:12px;border-radius:3px;border:2px solid var(--lc)}
+.dots i.on{background:var(--lc)}
+.prob{padding:22px 24px}
+.prob-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+form.ans{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:stretch}
+.field{display:flex;flex-direction:column;gap:6px;flex:1 1 220px;min-width:0}
+.field label{font-weight:700;font-size:15px}
+.field input{font:22px var(--f-math);padding:10px 14px;border:2px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);width:100%}
+.field input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.field input[aria-invalid="true"]{border-color:var(--bad)}
+.hint{font-size:13px;color:var(--muted)}
+.keys{display:flex;gap:6px}
+.keys button{font:18px var(--f-math);width:40px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--sheet-2);color:var(--ink);cursor:pointer}
+form.ans .btn{align-self:flex-start;margin-top:29px;padding:14px 22px}
+.fb{margin-top:14px;padding:12px 16px;border-radius:10px;font-weight:700}
+.fb:empty{display:none}
+.fb.ok{background:var(--ok-bg);color:var(--ok)}
+.fb.bad{background:var(--bad-bg);color:var(--bad)}
+.fb.info{background:var(--sheet-2);color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.solbox{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px}
+.solbox h3{font:700 24px/1 var(--f-hand)}
+.foot{border-top:1px solid var(--line);padding-block:20px 32px;color:var(--muted);font-size:14px}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+.linkbtn{background:none;border:0;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+.confirm{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:520px){body{font-size:16px}.theory,.ex,.prob{padding:18px 16px}form.ans .btn{margin-top:0;width:100%}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Перейти к содержанию</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/"><span class="logo" aria-hidden="true">x<sup>2</sup></span><span><b>Математика в клетку</b><small>5–11 классы · теория, примеры, тренажёр</small></span></a>
+    <div class="theme" role="group" aria-label="Тема оформления">
+      <button type="button" data-t="auto" aria-pressed="true"><span aria-hidden="true">◐</span> <span class="tl">Авто</span><span class="sr">Автоматическая тема</span></button>
+      <button type="button" data-t="light" aria-pressed="false"><span aria-hidden="true">☀</span> <span class="tl">Светлая</span><span class="sr">Светлая тема</span></button>
+      <button type="button" data-t="dark" aria-pressed="false"><span aria-hidden="true">☾</span> <span class="tl">Тёмная</span><span class="sr">Тёмная тема</span></button>
+    </div>
+  </div>
+</header>
+<main id="main" tabindex="-1"><div class="wrap" id="app"></div></main>
+<footer class="foot"><div class="wrap">
+  <span>Прогресс хранится только в этом браузере. Регистрация не нужна.</span>
+  <span id="reset"></span>
+</div></footer>
+
+<script>
+'use strict';
+/* ================= утилиты ================= */
+let rand=Math.random;
+const ri=(a,b)=>a+Math.floor(rand()*(b-a+1));
+const rnz=(a,b)=>{let v;do v=ri(a,b);while(v===0);return v};
+const pick=a=>a[Math.floor(rand()*a.length)];
+const coin=()=>rand()<.5;
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function withSeed(seed,fn){const o=rand;rand=mulberry32(seed);try{return fn()}finally{rand=o}}
+
+/* числа и запись */
+function N(x){if(x&&typeof x==='object')return rh(x);let v=Math.round(x*1e9)/1e9;if(Object.is(v,-0))v=0;return(v<0?'−':'')+String(Math.abs(v)).replace('.',',')}
+const P=x=>x<0?`(${N(x)})`:N(x);
+const sg=v=>v===0?'':v<0?` − ${N(-v)}`:` + ${N(v)}`;
+const F=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const S=x=>`<span class="sq">√<span>${x}</span></span>`;
+const X='<i>x</i>',Y='<i>y</i>',X2='<i>x</i>²',X3='<i>x</i>³';
+const sub=(v,i)=>`${v}<sub>${i}</sub>`;
+const sys=(...r)=>`<span class="sys"><span class="sys-b">{</span><span class="sys-r">${r.map(x=>`<span>${x}</span>`).join('')}</span></span>`;
+const INT=(a,b)=>`<span class="int"><span class="int-s">∫</span><span class="int-l"><span>${b}</span><span>${a}</span></span></span>`;
+const pw=(b,n)=>`${P(b)}<sup>${n}</sup>`;
+const lg=(a,b)=>`log<sub>${a}</sub>&#8202;${b}`;
+const Q=(text,expr)=>`${text}${expr?`<div class="expr">${expr}</div>`:''}`;
+function poly(ts){let s='';for(const[c,v]of ts){if(!c)continue;const a=Math.abs(c);let b;if(!v)b=N(a);else if(a===1)b=v.replace(/^[· ]/,'');else b=N(a)+v;s+=s===''?(c<0?'−':'')+b:(c<0?' − ':' + ')+b}return s||'0'}
+
+/* рациональные числа */
+function R(n,d=1){if(d<0){n=-n;d=-d}const g=gcd(n,d)||1;return{n:n/g,d:d/g}}
+const rv=r=>r.n/r.d;
+const radd=(a,b)=>R(a.n*b.d+b.n*a.d,a.d*b.d),rsub=(a,b)=>R(a.n*b.d-b.n*a.d,a.d*b.d),rmul=(a,b)=>R(a.n*b.n,a.d*b.d),rdiv=(a,b)=>R(a.n*b.d,a.d*b.n);
+function rh(r){return r.d===1?N(r.n):(r.n<0?'−':'')+F(Math.abs(r.n),r.d)}
+const rhP=r=>r.n<0?`(${rh(r)})`:rh(r);
+const sgR=r=>r.n<0?` − ${rh(R(-r.n,r.d))}`:` + ${rh(r)}`;
+function mixed(r){const a=Math.abs(r.n);if(r.d===1||a<r.d)return'';const w=Math.floor(a/r.d),m=a%r.d;return(r.n<0?'−':'')+w+F(m,r.d)}
+const ansR=r=>{const mx=mixed(r);return rh(r)+(mx?` = ${mx}`:'')};
+function factors(n){const f=[];let d=2;while(n>1){while(n%d===0){f.push(d);n/=d}d++}return f}
+const fs=n=>{const f=factors(n);return f.length>1?f.join(' · '):`${n} (простое)`};
+function commonF(a,b){const fb=factors(b),c=[];for(const p of factors(a)){const i=fb.indexOf(p);if(i>=0){c.push(p);fb.splice(i,1)}}return c}
+function coprime(lo,hi){let m,n;do{m=ri(lo,hi);n=ri(lo,hi)}while(m===n||gcd(m,n)!==1);return[m,n]}
+const TRIPLES=[[3,4,5],[5,12,13],[8,15,17],[7,24,25],[20,21,29]];
+function triple(max=60){let t;do{const b=pick(TRIPLES),k=ri(1,6);t=b.map(x=>x*k)}while(t[2]>max);return coin()?t:[t[1],t[0],t[2]]}
+const reduceStep=(n,d)=>{const g=gcd(n,d);return g>1&&d/g!==d?`Сокращаем дробь на ${g}: ${F(n,d)} = ${rh(R(n,d))}.`:null};
+
+/* ================= темы ================= */
+const TOPICS=[
+/* ---------- 5 класс ---------- */
+{id:'order',g:5,t:'Порядок действий',d:'Скобки, умножение и деление, сложение и вычитание: что выполнять первым.',
+th:`<h3>Главное правило</h3><p>Если в выражении несколько действий, их выполняют в строгом порядке:</p>
+<ol><li>сначала — действия в <b>скобках</b>;</li><li>затем — <b>умножение и деление</b> по порядку слева направо;</li><li>последними — <b>сложение и вычитание</b> слева направо.</li></ol>
+<div class="rule">36 − 4 · 5 = 36 − 20 = 16 &nbsp;(а не 32 · 5 = 160)</div>
+<h3>Внутри скобок</h3><p>В скобках действует тот же порядок: сначала умножение и деление, потом сложение и вычитание. Если скобки вложены, начинают с самых внутренних.</p>
+<div class="rule">(2 + 3 · 4) : 7 = (2 + 12) : 7 = 14 : 7 = 2</div>
+<h3>Действия одной ступени</h3><p>Деление и умножение равноправны, поэтому идём слева направо: 48 : 6 · 2 = 8 · 2 = 16.</p>
+<p class="note">Совет: перед вычислением пронумеруйте действия карандашом над знаками — так вы ничего не перепутаете.</p>`,
+gen(l){
+ if(l===1){const b=ri(2,9),c=ri(2,9),m=b*c,pl=coin(),a=pl?ri(5,60):ri(m+1,m+40),r=pl?a+m:a-m,op=pl?'+':'−';
+  return{q:Q('Вычислите:',`${a} ${op} ${b} · ${c}`),a:r,steps:[`Умножение выполняется раньше ${pl?'сложения':'вычитания'}: ${b} · ${c} = ${m}.`,`${a} ${op} ${m} = ${r}.`]}}
+ if(l===2){const a=ri(3,25),b=ri(3,25),c=ri(2,9),e=ri(2,9),q=ri(2,9),d=e*q,s=a+b,p=s*c,r=p-q;
+  return{q:Q('Вычислите:',`(${a} + ${b}) · ${c} − ${d} : ${e}`),a:r,steps:[`Сначала действие в скобках: ${a} + ${b} = ${s}.`,`Умножение и деление слева направо: ${s} · ${c} = ${p}; ${d} : ${e} = ${q}.`,`Последним — вычитание: ${p} − ${q} = ${r}.`]}}
+ const d=ri(2,9),q=ri(4,15),inner=d*q;let b,c;do{b=ri(2,9);c=ri(2,9)}while(b*c>=inner);
+ const m=b*c,a=inner-m,e=ri(2,6),f=ri(2,6),ef=e*f,h=ri(1,q+ef-1),r=q+ef-h;
+ return{q:Q('Вычислите:',`(${a} + ${b} · ${c}) : ${d} + ${e} · ${f} − ${h}`),a:r,steps:[`В скобках сначала умножение: ${b} · ${c} = ${m}, затем сложение: ${a} + ${m} = ${inner}.`,`Деление: ${inner} : ${d} = ${q}.`,`Умножение: ${e} · ${f} = ${ef}.`,`Сложение и вычитание слева направо: ${q} + ${ef} − ${h} = ${r}.`]}}},
+
+{id:'gcd',g:5,t:'НОД и НОК',d:'Разложение на простые множители, наибольший общий делитель и наименьшее общее кратное.',
+th:`<h3>Простые и составные числа</h3><p><b>Простое число</b> делится только на 1 и на само себя: 2, 3, 5, 7, 11, 13… Остальные числа больше 1 — <b>составные</b>. Любое составное число можно разложить на простые множители:</p>
+<div class="rule">60 = 2 · 2 · 3 · 5 &nbsp;&nbsp; 84 = 2 · 2 · 3 · 7</div>
+<h3>НОД — наибольший общий делитель</h3><p>Самое большое число, на которое делятся оба числа. Чтобы найти НОД, перемножьте <b>общие</b> простые множители:</p>
+<div class="rule">НОД(60; 84) = 2 · 2 · 3 = 12</div>
+<h3>НОК — наименьшее общее кратное</h3><p>Самое маленькое число, которое делится на оба числа. Удобная формула:</p>
+<div class="rule">НОК(<i>a</i>; <i>b</i>) = <i>a</i> · <i>b</i> : НОД(<i>a</i>; <i>b</i>) &nbsp;&nbsp; НОК(60; 84) = 5040 : 12 = 420</div>
+<p class="note">НОД помогает делить «поровну без остатка» (подарки, букеты), НОК — находить, когда события совпадут снова (автобусы, шаги, обороты).</p>`,
+gen(l){
+ const gs=(a,b)=>{const c=commonF(a,b),g=gcd(a,b);return[`Раскладываем на простые множители: ${a} = ${fs(a)}, ${b} = ${fs(b)}.`,c.length?`Общие множители: ${c.join(' · ')}. НОД(${a}; ${b}) = ${g}.`:`Общих простых множителей нет, НОД(${a}; ${b}) = 1.`]};
+ const ls=(a,b)=>{const g=gcd(a,b);return[...gs(a,b),`НОК(${a}; ${b}) = ${a} · ${b} : ${g} = ${a*b} : ${g} = ${lcm(a,b)}.`]};
+ if(l<3){
+  const isG=coin();let a,b;
+  if(l===1){if(isG){const g=ri(2,6),[m,n]=coprime(2,7);a=g*m;b=g*n}else{do{a=ri(2,12);b=ri(2,12)}while(a===b)}}
+  else{const g=ri(3,15),[m,n]=coprime(2,9);a=g*m;b=g*n}
+  return isG?{q:Q(`Найдите наибольший общий делитель чисел ${a} и ${b}.`,`НОД(${a}; ${b})`),a:gcd(a,b),steps:gs(a,b)}
+           :{q:Q(`Найдите наименьшее общее кратное чисел ${a} и ${b}.`,`НОК(${a}; ${b})`),a:lcm(a,b),steps:ls(a,b)}}
+ const t=ri(0,2);
+ if(t===0){const g=ri(4,15),[m,n]=coprime(2,9),a=g*m,b=g*n;
+  return{q:Q(`Есть ${a} конфет и ${b} мандаринов. Какое наибольшее число одинаковых подарков можно составить, чтобы использовать всё?`),a:g,steps:[`Число подарков должно делить и ${a}, и ${b} — ищем НОД.`,...gs(a,b),`В каждом подарке будет ${m} конфет и ${n} мандаринов.`]}}
+ if(t===1){let a,b;do{a=ri(6,30);b=ri(6,30)}while(a===b||lcm(a,b)>240||lcm(a,b)===Math.max(a,b));
+  return{q:Q(`Автобусы двух маршрутов одновременно отправились с конечной остановки. Первый ходит каждые ${a} мин, второй — каждые ${b} мин. Через сколько минут они снова отправятся одновременно?`),a:lcm(a,b),steps:[`Время должно делиться и на ${a}, и на ${b} — ищем НОК.`,...ls(a,b)]}}
+ let g=ri(2,12),m,n,k;do{m=ri(2,9);n=ri(2,9);k=ri(2,9)}while(m===n||n===k||m===k||gcd(gcd(m,n),k)!==1);
+ const a=g*m,b=g*n,c=g*k,cm=commonF(a,b).filter((p,i,arr)=>true);let cc=commonF(a,b),fc=factors(c),common=[];for(const p of cc){const i=fc.indexOf(p);if(i>=0){common.push(p);fc.splice(i,1)}}
+ return{q:Q(`Найдите НОД трёх чисел:`,`НОД(${a}; ${b}; ${c})`),a:g,steps:[`${a} = ${fs(a)}, ${b} = ${fs(b)}, ${c} = ${fs(c)}.`,common.length?`Множители, общие для всех трёх чисел: ${common.join(' · ')} = ${g}.`:`Общих множителей нет, НОД = 1.`]}}},
+
+{id:'fractions',g:5,t:'Обыкновенные дроби',d:'Сложение, вычитание, умножение и деление дробей, смешанные числа.',
+th:`<h3>Что такое дробь</h3><p>Дробь ${F('<i>a</i>','<i>b</i>')} — это <i>a</i> частей из <i>b</i> равных. Верхнее число — <b>числитель</b>, нижнее — <b>знаменатель</b>. Если числитель меньше знаменателя, дробь правильная.</p>
+<h3>Основное свойство</h3><p>Числитель и знаменатель можно умножить или разделить на одно и то же число — дробь не изменится. Так дроби <b>сокращают</b>: ${F(6,8)} = ${F(3,4)}.</p>
+<h3>Сложение и вычитание</h3><div class="rule"><div>${F('<i>a</i>','<i>c</i>')} + ${F('<i>b</i>','<i>c</i>')} = ${F('<i>a</i> + <i>b</i>','<i>c</i>')}</div><div>${F(1,4)} + ${F(1,6)} = ${F(3,12)} + ${F(2,12)} = ${F(5,12)}</div></div>
+<p>Если знаменатели разные, приведите дроби к общему знаменателю — удобнее всего к НОК знаменателей.</p>
+<h3>Умножение и деление</h3><div class="rule"><div>${F('<i>a</i>','<i>b</i>')} · ${F('<i>c</i>','<i>d</i>')} = ${F('<i>a</i> · <i>c</i>','<i>b</i> · <i>d</i>')}</div><div>${F('<i>a</i>','<i>b</i>')} : ${F('<i>c</i>','<i>d</i>')} = ${F('<i>a</i>','<i>b</i>')} · ${F('<i>d</i>','<i>c</i>')}</div></div>
+<h3>Смешанные числа</h3><p>${'2'}${F(1,3)} = ${F('2 · 3 + 1',3)} = ${F(7,3)}. Перед умножением и делением смешанные числа переводят в неправильные дроби.</p>
+<p class="note">В тренажёре ответ можно вводить так: 7/6, 1 1/6 (целая часть, пробел, дробь) или десятичной дробью, если она конечная.</p>`,
+gen(l){
+ if(l===1){const d=ri(5,15),pl=coin();let a=ri(1,d-1),b=ri(1,d-1);if(!pl){while(a===b)b=ri(1,d-1);if(a<b)[a,b]=[b,a]}
+  const n=pl?a+b:a-b,r=R(n,d),op=pl?'+':'−',st=[`Знаменатели одинаковые: ${pl?'складываем':'вычитаем'} числители, знаменатель оставляем: ${F(`${a} ${op} ${b}`,d)} = ${F(n,d)}.`],rs=reduceStep(n,d);if(rs)st.push(rs);if(mixed(r))st.push(`Выделяем целую часть: ${rh(r)} = ${mixed(r)}.`);
+  return{q:Q('Вычислите:',`${F(a,d)} ${op} ${F(b,d)}`),a:rv(r),ans:ansR(r),steps:st}}
+ if(l===2){let d1,d2,a1,a2;do{d1=ri(2,12);d2=ri(2,12);a1=ri(1,d1-1);a2=ri(1,d2-1)}while(d1===d2||a1*d2===a2*d1);
+  const pl=coin();if(!pl&&a1*d2<a2*d1){[d1,d2]=[d2,d1];[a1,a2]=[a2,a1]}
+  const L=lcm(d1,d2),k1=L/d1,k2=L/d2,n=pl?a1*k1+a2*k2:a1*k1-a2*k2,r=R(n,L),op=pl?'+':'−';
+  const st=[`Общий знаменатель — НОК(${d1}; ${d2}) = ${L}.`,`Дополнительные множители ${k1} и ${k2}: ${F(a1,d1)} = ${F(a1*k1,L)}, ${F(a2,d2)} = ${F(a2*k2,L)}.`,`${F(a1*k1,L)} ${op} ${F(a2*k2,L)} = ${F(n,L)}.`],rs=reduceStep(n,L);if(rs)st.push(rs);if(mixed(r))st.push(`Выделяем целую часть: ${mixed(r)}.`);
+  return{q:Q('Вычислите:',`${F(a1,d1)} ${op} ${F(a2,d2)}`),a:rv(r),ans:ansR(r),steps:st}}
+ const d1=ri(2,9),n1=ri(1,d1-1),w1=ri(1,3),d2=ri(2,9),n2=ri(1,d2-1),w2=ri(0,2),mul=coin();
+ const i1=w1*d1+n1,i2=w2*d2+n2,r=mul?R(i1*i2,d1*d2):R(i1*d2,d1*i2);
+ const st=[`Переводим смешанные числа в неправильные дроби: ${w1}${F(n1,d1)} = ${F(i1,d1)}${w2?`, ${w2}${F(n2,d2)} = ${F(i2,d2)}`:''}.`];
+ if(mul)st.push(`${F(i1,d1)} · ${F(i2,d2)} = ${F(`${i1} · ${i2}`,`${d1} · ${d2}`)} = ${F(i1*i2,d1*d2)}.`);
+ else st.push(`Деление заменяем умножением на обратную дробь: ${F(i1,d1)} · ${F(d2,i2)} = ${F(i1*d2,d1*i2)}.`);
+ const rs=mul?reduceStep(i1*i2,d1*d2):reduceStep(i1*d2,d1*i2);if(rs)st.push(rs);if(mixed(r))st.push(`Выделяем целую часть: ${mixed(r)}.`);
+ return{q:Q('Вычислите:',`${w1}${F(n1,d1)} ${mul?'·':':'} ${w2?w2:''}${F(n2,d2)}`),a:rv(r),ans:ansR(r),steps:st}}},
+
+{id:'decimals',g:5,t:'Десятичные дроби',d:'Сложение, вычитание, умножение и деление десятичных дробей.',
+th:`<h3>Запись</h3><p>Десятичная дробь — другая запись дроби со знаменателем 10, 100, 1000…: 0,7 = ${F(7,10)}, 3,25 = ${F(325,100)}. Нули в конце можно дописывать и убирать: 2,5 = 2,50.</p>
+<h3>Сложение и вычитание</h3><p>Записываем числа столбиком <b>запятая под запятой</b>, уравниваем число знаков нулями и считаем как натуральные числа.</p><div class="rule">3,45 + 2,7 = 3,45 + 2,70 = 6,15</div>
+<h3>Умножение</h3><p>Умножаем, не обращая внимания на запятые. Затем отделяем справа столько знаков, сколько их было в обоих множителях вместе.</p><div class="rule">1,2 · 0,3: &nbsp;12 · 3 = 36, знаков 1 + 1 = 2 → 0,36</div>
+<h3>Деление</h3><p>Если делитель — десятичная дробь, переносим запятую в делимом и делителе вправо на одинаковое число знаков, чтобы делитель стал натуральным.</p><div class="rule">7,56 : 0,4 = 75,6 : 4 = 18,9</div>
+<p class="note">Умножить на 10, 100, 1000 — перенести запятую вправо на 1, 2, 3 знака; разделить — влево.</p>`,
+gen(l){
+ if(l===1){let A=ri(105,999),B=ri(11,99)*10;const pl=coin();if(!pl&&A<B)[A,B]=[B,A];const a=A/100,b=B/100,r=(pl?A+B:A-B)/100,op=pl?'+':'−';
+  const two=x=>x.toFixed(2).replace('.',',');
+  return{q:Q('Вычислите:',`${N(a)} ${op} ${N(b)}`),a:r,steps:[`Уравниваем число знаков после запятой: ${two(a)} ${op} ${two(b)}.`,`Считаем как натуральные числа, запятая под запятой: ${A} ${op} ${B} = ${pl?A+B:A-B}.`,`Ставим запятую через 2 знака справа: ${N(r)}.`]}}
+ if(l===2){const A=ri(11,99),ka=1,kb=pick([0,1,2]),B=kb===0?ri(3,12):ri(2,9),k=ka+kb,p=A*B,r=p/10**k,a=A/10,b=B/10**kb;
+  return{q:Q('Вычислите:',`${N(a)} · ${N(b)}`),a:r,steps:[`Умножаем, не глядя на запятые: ${A} · ${B} = ${p}.`,`В множителях всего ${ka} + ${kb} = ${k} ${k===1?'знак':'знака'} после запятой. Отделяем их справа: ${N(r)}.`]}}
+ const kd=pick([1,2]),D=ri(2,9),Qi=ri(11,99),div=D/10**kd,q=Qi/10,dvd=D*Qi/10**(kd+1),sh=D*Qi/10;
+ return{q:Q('Вычислите:',`${N(dvd)} : ${N(div)}`),a:q,steps:[`Переносим запятую в делимом и делителе на ${kd} ${kd===1?'знак':'знака'} вправо: ${N(dvd)} : ${N(div)} = ${N(sh)} : ${D}.`,`Делим на натуральное число: ${N(sh)} : ${D} = ${N(q)}.`,`Проверка: ${N(q)} · ${N(div)} = ${N(dvd)}.`]}}},
+
+/* ---------- 6 класс ---------- */
+{id:'ratio',g:6,t:'Отношения и пропорции',d:'Основное свойство пропорции, прямая и обратная пропорциональность.',
+th:`<h3>Отношение</h3><p>Отношение двух чисел — их частное: <i>a</i> : <i>b</i> или ${F('<i>a</i>','<i>b</i>')}. Оно показывает, во сколько раз одно число больше другого или какую часть составляет.</p>
+<h3>Пропорция</h3><p>Пропорция — равенство двух отношений: ${F('<i>a</i>','<i>b</i>')} = ${F('<i>c</i>','<i>d</i>')}. Числа <i>a</i> и <i>d</i> — крайние члены, <i>b</i> и <i>c</i> — средние.</p>
+<div class="rule">Основное свойство: <i>a</i> · <i>d</i> = <i>b</i> · <i>c</i> &nbsp;(«крест-накрест»)</div>
+<p>Так находят неизвестный член: ${F(X,6)} = ${F(10,15)} ⇒ 15${X} = 60 ⇒ ${X} = 4.</p>
+<h3>Прямая и обратная пропорциональность</h3><ul><li><b>Прямая:</b> одна величина растёт во столько же раз, во сколько другая (масса и стоимость товара).</li><li><b>Обратная:</b> одна растёт, другая уменьшается во столько же раз (число рабочих и время работы, скорость и время).</li></ul>
+<h3>Деление в отношении</h3><p>Чтобы разделить число в отношении 2 : 3, считаем части: 2 + 3 = 5, находим одну часть и умножаем.</p>`,
+gen(l){
+ if(l===1){let a,b;do{a=ri(2,12);b=ri(2,12)}while(a===b);const k=ri(2,6),c=b*k,x=a*k;
+  return{q:Q(`Найдите ${X} из пропорции:`,`${F(a,b)} = ${F(X,c)}`),a:x,steps:[`По основному свойству пропорции: ${b} · ${X} = ${a} · ${c}.`,`${X} = ${a*c} : ${b} = ${x}.`]}}
+ if(l===2){if(coin()){const m=ri(2,6),pr=ri(4,25)*10,P0=m*pr;let n;do n=ri(2,9);while(n===m);
+   return{q:Q(`За ${m} кг яблок заплатили ${P0} руб. Сколько рублей стоят ${n} кг таких же яблок?`),a:n*pr,steps:[`Стоимость прямо пропорциональна массе. Цена 1 кг: ${P0} : ${m} = ${pr} руб.`,`${n} кг стоят ${n} · ${pr} = ${n*pr} руб.`]}}
+  const [a,b]=coprime(1,9),k=ri(2,15),Sm=(a+b)*k;
+  return{q:Q(`Число ${Sm} разделили на две части в отношении ${a} : ${b}. Найдите бо́льшую часть.`),a:Math.max(a,b)*k,steps:[`Всего частей: ${a} + ${b} = ${a+b}.`,`Одна часть: ${Sm} : ${a+b} = ${k}.`,`Бо́льшая часть: ${Math.max(a,b)} · ${k} = ${Math.max(a,b)*k}.`]}}
+ if(coin()){let w,d,tot,c;do{w=ri(2,12);d=ri(2,20);tot=w*d;c=[];for(let i=2;i<=40;i++)if(tot%i===0&&i!==w)c.push(i)}while(!c.length);const w2=pick(c);
+  return{q:Q(`${w} рабочих выполняют заказ за ${d} дней. За сколько дней выполнят этот заказ ${w2} рабочих, если все работают одинаково?`),a:tot/w2,steps:[`Число рабочих и время обратно пропорциональны: во сколько раз больше рабочих, во столько раз меньше дней.`,`Объём работы: ${w} · ${d} = ${tot} человеко-дней.`,`${tot} : ${w2} = ${tot/w2} дн.`]}}
+ let v1,t1,tot,c;do{v1=ri(4,12)*10;t1=ri(2,9);tot=v1*t1;c=[];for(let v=30;v<=150;v+=10)if(tot%v===0&&v!==v1)c.push(v)}while(!c.length);const v2=pick(c);
+ return{q:Q(`Поезд, двигаясь со скоростью ${v1} км/ч, проходит путь за ${t1} ч. За сколько часов он пройдёт этот путь со скоростью ${v2} км/ч?`),a:tot/v2,steps:[`Скорость и время при одном и том же пути обратно пропорциональны.`,`Путь: ${v1} · ${t1} = ${tot} км.`,`Время: ${tot} : ${v2} = ${N(tot/v2)} ч.`]}}},
+
+{id:'percent',g:6,t:'Проценты',d:'Процент от числа, число по проценту, повышение и снижение цены.',
+th:`<h3>Что такое процент</h3><p>Процент — одна сотая часть: 1% = ${F(1,100)} = 0,01. Поэтому 25% = 0,25, 150% = 1,5, а всё число — это 100%.</p>
+<h3>Три основные задачи</h3>
+<div class="rule"><div>Процент от числа: <i>p</i>% от <i>A</i> = <i>A</i> · ${F('<i>p</i>',100)}</div><div>Число по его проценту: <i>A</i> = <i>B</i> : ${F('<i>p</i>',100)}</div><div>Сколько процентов: ${F('<i>a</i>','<i>b</i>')} · 100%</div></div>
+<p>Пример: 20% от 350 = 350 · 0,2 = 70. Если 15% числа равны 45, то число равно 45 : 0,15 = 300.</p>
+<h3>Повышение и снижение</h3><p>После повышения на <i>p</i>% величина составляет (100 + <i>p</i>)% от прежней, после снижения — (100 − <i>p</i>)%.</p>
+<div class="rule">Цена 800 руб. выросла на 10%: 800 · 1,1 = 880 руб.</div>
+<p class="note">Повышение на 20% и последующее снижение на 20% не возвращают исходную цену: второй процент считают от новой, большей величины.</p>`,
+gen(l){
+ const PS=[5,10,15,20,25,30,40,50,60,75];
+ if(l===1){const p=pick(PS),base=100/gcd(p,100),k0=Math.ceil(30/base),n=base*ri(k0,k0+25),r=n*p/100;
+  return{q:Q(`Найдите ${p}% от числа ${n}.`),a:r,steps:[`${p}% = ${F(p,100)} = ${N(p/100)}.`,`${n} · ${N(p/100)} = ${N(r)}.`]}}
+ if(l===2){const p=pick(PS),base=100/gcd(p,100),Xn=base*ri(2,30),A=Xn*p/100;
+  if(coin())return{q:Q(`${p}% числа равны ${N(A)}. Найдите это число.`),a:Xn,steps:[`1% числа: ${N(A)} : ${p} = ${N(A/p)}.`,`Всё число (100%): ${N(A/p)} · 100 = ${Xn}.`]};
+  return{q:Q(`Сколько процентов составляет число ${N(A)} от числа ${Xn}?`),a:p,steps:[`Делим часть на целое: ${N(A)} : ${Xn} = ${N(A/Xn)}.`,`Переводим в проценты: ${N(A/Xn)} · 100% = ${p}%.`]}}
+ const P0=ri(5,60)*100,p=pick([10,20,25,30,40,50]),q=pick([10,20,25,30,40,50]),P1=P0*(100+p)/100,P2=Math.round(P1*(100-q))/100;
+ return{q:Q(`Товар стоил ${P0} руб. Сначала цену повысили на ${p}%, затем новую цену снизили на ${q}%. Сколько рублей стал стоить товар?`),a:P2,steps:[`После повышения цена составляет ${100+p}% от прежней: ${P0} · ${N((100+p)/100)} = ${N(P1)} руб.`,`После снижения остаётся ${100-q}% от новой цены: ${N(P1)} · ${N((100-q)/100)} = ${N(P2)} руб.`,`Проценты повышения и снижения считаются от разных величин, поэтому не компенсируют друг друга.`]}}},
+
+{id:'signed',g:6,t:'Положительные и отрицательные числа',d:'Модуль, сложение и вычитание чисел с разными знаками, правило знаков.',
+th:`<h3>Модуль числа</h3><p>Модуль |<i>a</i>| — расстояние от нуля до числа на координатной прямой, поэтому он не бывает отрицательным: |−7| = 7, |7| = 7.</p>
+<h3>Сложение</h3><ul><li><b>Знаки одинаковые:</b> складываем модули и ставим общий знак: −5 + (−8) = −13.</li><li><b>Знаки разные:</b> из большего модуля вычитаем меньший и ставим знак числа с бо́льшим модулем: −12 + 7 = −5.</li></ul>
+<h3>Вычитание</h3><div class="rule"><i>a</i> − <i>b</i> = <i>a</i> + (−<i>b</i>) &nbsp;&nbsp; 4 − (−9) = 4 + 9 = 13</div>
+<h3>Умножение и деление</h3><p>Перемножаем или делим модули, а знак определяем по правилу:</p>
+<div class="rule"><div>«+» · «+» = «+» &nbsp;&nbsp; «−» · «−» = «+»</div><div>«+» · «−» = «−» &nbsp;&nbsp; «−» · «+» = «−»</div></div>
+<p class="note">Чётное число минусов в произведении даёт плюс, нечётное — минус.</p>`,
+gen(l){
+ const addEx=(a,b)=>{const r=a+b;if(r===0)return`Сумма противоположных чисел равна 0.`;if(Math.sign(a)===Math.sign(b))return`Знаки одинаковые: складываем модули (${Math.abs(a)} + ${Math.abs(b)} = ${Math.abs(r)}) и ставим общий знак: ${N(r)}.`;
+  return`Знаки разные: из большего модуля вычитаем меньший (${Math.max(Math.abs(a),Math.abs(b))} − ${Math.min(Math.abs(a),Math.abs(b))} = ${Math.abs(r)}) и ставим знак числа с бо́льшим модулем: ${N(r)}.`};
+ if(l===1){let a,b;do{a=rnz(-30,30);b=rnz(-30,30)}while(a>0&&b>0);
+  if(coin())return{q:Q('Вычислите:',`${N(a)} + ${P(b)}`),a:a+b,steps:[addEx(a,b)]};
+  return{q:Q('Вычислите:',`${N(a)} − ${P(b)}`),a:a-b,steps:[`Вычитание заменяем сложением с противоположным числом: ${N(a)} − ${P(b)} = ${N(a)} + ${P(-b)}.`,addEx(a,-b)]}}
+ if(l===2){let c;do c=rnz(-9,9);while(Math.abs(c)<2);const k=rnz(-6,6),a=c*k,b=rnz(-9,9),p=a*b,r=p/c;
+  return{q:Q('Вычислите:',`${N(a)} · ${P(b)} : ${P(c)}`),a:r,steps:[`Умножаем: ${N(a)} · ${P(b)} = ${N(p)} (${(a<0)===(b<0)?'знаки одинаковые — результат положительный':'знаки разные — результат отрицательный'}).`,`Делим: ${N(p)} : ${P(c)} = ${N(r)} (${(p<0)===(c<0)?'знаки одинаковые — плюс':'знаки разные — минус'}).`]}}
+ let e;do e=rnz(-6,6);while(Math.abs(e)<2);const a=rnz(-20,20),b=rnz(-9,9),c=rnz(-9,9),k=rnz(-9,9),d=e*k,m=b*c,r=a-m+k;
+ return{q:Q('Вычислите:',`${N(a)} − ${P(b)} · ${P(c)} + ${P(d)} : ${P(e)}`),a:r,steps:[`Умножение: ${P(b)} · ${P(c)} = ${N(m)}.`,`Деление: ${P(d)} : ${P(e)} = ${N(k)}.`,`${N(a)} − ${P(m)} + ${P(k)} = ${N(a-m)} + ${P(k)} = ${N(r)}.`]}}},
+
+{id:'coords',g:6,t:'Координаты и расстояния',d:'Координатная прямая, расстояние между точками, середина отрезка.',
+th:`<h3>Координатная прямая</h3><p>Прямая с началом отсчёта 0, единичным отрезком и направлением. Каждой точке соответствует число — её <b>координата</b>: A(−3), B(5).</p>
+<h3>Расстояние между точками</h3><div class="rule">AB = |<i>b</i> − <i>a</i>| &nbsp;&nbsp; A(−3), B(5): AB = |5 − (−3)| = 8</div>
+<h3>Середина отрезка</h3><p>Координата середины — среднее арифметическое координат концов:</p><div class="rule"><i>c</i> = ${F('<i>a</i> + <i>b</i>',2)} &nbsp;&nbsp; A(−3), B(5): C(1)</div>
+<p>Если известны конец A(<i>a</i>) и середина C(<i>c</i>), второй конец: <i>b</i> = 2<i>c</i> − <i>a</i>.</p>
+<h3>Координатная плоскость</h3><p>Две перпендикулярные прямые: ось абсцисс O<i>x</i> и ось ординат O<i>y</i>. Точка задаётся парой чисел M(<i>x</i>; <i>y</i>): сначала абсцисса, потом ордината.</p>
+<p class="note">Расстояние всегда неотрицательно, поэтому от разности берём модуль.</p>`,
+gen(l){
+ let a,b;do{a=ri(-20,20);b=ri(-20,20)}while(a===b);
+ if(l===1)return{q:Q(`На координатной прямой отмечены точки A(${N(a)}) и B(${N(b)}). Найдите длину отрезка AB.`),a:Math.abs(b-a),steps:[`Расстояние равно модулю разности координат: AB = |${N(b)} − ${P(a)}|.`,`|${N(b-a)}| = ${Math.abs(b-a)}.`]};
+ if(l===2)return{q:Q(`Найдите координату середины отрезка AB, если A(${N(a)}) и B(${N(b)}).`),a:(a+b)/2,steps:[`Координата середины — среднее арифметическое координат концов.`,`${F(`${N(a)} + ${P(b)}`,2)} = ${F(N(a+b),2)} = ${N((a+b)/2)}.`]};
+ const c=(a+b)/2;
+ return{q:Q(`Точка C(${N(c)}) — середина отрезка AB, A(${N(a)}). Найдите координату точки B.`),a:b,steps:[`Для середины: ${F('<i>a</i> + <i>b</i>',2)} = <i>c</i>, значит <i>b</i> = 2<i>c</i> − <i>a</i>.`,`<i>b</i> = 2 · ${P(c)} − ${P(a)} = ${N(2*c)} − ${P(a)} = ${N(b)}.`]}}},
+
+/* ---------- 7 класс ---------- */
+{id:'lineq',g:7,t:'Линейные уравнения',d:'Перенос слагаемых, раскрытие скобок, уравнения вида ax = b.',
+th:`<h3>Что такое линейное уравнение</h3><p>Уравнение вида <i>ax</i> = <i>b</i>. Если <i>a</i> ≠ 0, у него один корень: ${X} = ${F('<i>b</i>','<i>a</i>')}.</p>
+<h3>Два главных приёма</h3><ol><li>Любое слагаемое можно <b>перенести</b> в другую часть, поменяв его знак.</li><li>Обе части можно <b>умножить или разделить</b> на одно и то же число, не равное нулю.</li></ol>
+<div class="rule"><div>5${X} − 7 = 2${X} + 8</div><div>5${X} − 2${X} = 8 + 7</div><div>3${X} = 15 &nbsp;⇒&nbsp; ${X} = 5</div></div>
+<h3>Скобки</h3><p>Сначала раскройте скобки: 3(${X} − 2) = 3${X} − 6. Если перед скобкой минус, знаки внутри меняются: −(${X} − 4) = −${X} + 4.</p>
+<p class="note">Проверка: подставьте найденный корень в исходное уравнение — левая и правая части должны совпасть.</p>`,
+gen(l){
+ const x=rnz(-10,10);
+ if(l===1){let a;do a=rnz(-9,9);while(Math.abs(a)<2);const b=rnz(-20,20),c=a*x+b;
+  return{q:Q('Решите уравнение:',`${poly([[a,X],[b,'']])} = ${N(c)}`),a:x,steps:[`Переносим ${N(b)} в правую часть с противоположным знаком: ${poly([[a,X]])} = ${N(c)}${sg(-b)} = ${N(c-b)}.`,`Делим обе части на ${P(a)}: ${X} = ${N(c-b)} : ${P(a)} = ${N(x)}.`]}}
+ if(l===2){let a,c;do{a=rnz(-9,9);c=rnz(-9,9)}while(a===c);const b=rnz(-15,15),d=a*x+b-c*x;
+  return{q:Q('Решите уравнение:',`${poly([[a,X],[b,'']])} = ${poly([[c,X],[d,'']])}`),a:x,steps:[`Слагаемые с ${X} — влево, числа — вправо: ${poly([[a,X]])} − ${P(c)}${X} = ${N(d)} − ${P(b)}.`,`${poly([[a-c,X]])} = ${N(d-b)}.`,`${X} = ${N(d-b)} : ${P(a-c)} = ${N(x)}.`]}}
+ let k,m;do{k=rnz(-6,6);m=rnz(-6,6)}while(Math.abs(k)<2||Math.abs(m)<2||k===m);const b=rnz(-9,9),e=rnz(-9,9),xx=rnz(-8,8),c=k*(xx+b)-m*(xx-e),rhs=-m*e-k*b+c;
+ return{q:Q('Решите уравнение:',`${N(k)}(${X}${sg(b)})${sg(-c)} = ${N(m)}(${X}${sg(-e)})`),a:xx,steps:[`Раскрываем скобки: ${poly([[k,X],[k*b,'']])}${sg(-c)} = ${poly([[m,X],[-m*e,'']])}.`,`Переносим: ${poly([[k,X]])} − ${P(m)}${X} = ${N(-m*e)} − ${P(k*b)} + ${P(c)}.`,`${poly([[k-m,X]])} = ${N(rhs)}.`,`${X} = ${N(rhs)} : ${P(k-m)} = ${N(xx)}.`]}}},
+
+{id:'powers',g:7,t:'Степени',d:'Степень с натуральным показателем и её свойства.',
+th:`<h3>Определение</h3><p><i>a</i><sup><i>n</i></sup> — произведение <i>n</i> одинаковых множителей <i>a</i>: 2<sup>5</sup> = 2 · 2 · 2 · 2 · 2 = 32. Число <i>a</i> — основание, <i>n</i> — показатель.</p>
+<p>По договорённости <i>a</i><sup>1</sup> = <i>a</i> и <i>a</i><sup>0</sup> = 1 (при <i>a</i> ≠ 0).</p>
+<h3>Свойства</h3><div class="rule"><div><i>a</i><sup><i>m</i></sup> · <i>a</i><sup><i>n</i></sup> = <i>a</i><sup><i>m</i> + <i>n</i></sup></div><div><i>a</i><sup><i>m</i></sup> : <i>a</i><sup><i>n</i></sup> = <i>a</i><sup><i>m</i> − <i>n</i></sup></div><div>(<i>a</i><sup><i>m</i></sup>)<sup><i>n</i></sup> = <i>a</i><sup><i>mn</i></sup></div><div>(<i>ab</i>)<sup><i>n</i></sup> = <i>a</i><sup><i>n</i></sup><i>b</i><sup><i>n</i></sup></div></div>
+<h3>Знак степени</h3><p>Отрицательное число в чётной степени положительно, в нечётной — отрицательно: (−2)<sup>4</sup> = 16, (−2)<sup>3</sup> = −8. Но −2<sup>4</sup> = −16: здесь в степень возводится только 2.</p>
+<p class="note">Чтобы применить свойства, приведите степени к одному основанию: 8 = 2<sup>3</sup>, 9 = 3<sup>2</sup>, 27 = 3<sup>3</sup>.</p>`,
+gen(l){
+ if(l===1){const B={2:8,3:5,4:4,5:4,10:6,'-2':6,'-3':4},b=+pick(Object.keys(B)),n=rand()<.12?0:ri(2,B[b]),v=b**n;
+  if(n===0)return{q:Q('Вычислите:',pw(b,0)),a:1,steps:[`Любое число, кроме нуля, в нулевой степени равно 1.`]};
+  const st=[`${pw(b,n)} = ${Array(n).fill(P(b)).join(' · ')} = ${N(v)}.`];if(b<0)st.push(`Отрицательное основание в ${n%2?'нечётной':'чётной'} степени даёт ${n%2?'отрицательное':'положительное'} число.`);
+  return{q:Q('Вычислите:',pw(b,n)),a:v,steps:st}}
+ if(l===2){const a=pick([2,3,5]),r=ri(1,a===2?6:a===3?4:3);let m,n,k;do{m=ri(3,9);n=ri(2,8);k=m+n-r}while(k<2);
+  return{q:Q('Вычислите:',`${pw(a,m)} · ${pw(a,n)} : ${pw(a,k)}`),a:a**r,steps:[`При умножении показатели складываются: ${pw(a,m)} · ${pw(a,n)} = ${pw(a,m+n)}.`,`При делении вычитаются: ${pw(a,m+n)} : ${pw(a,k)} = ${pw(a,r)}.`,`${pw(a,r)} = ${a**r}.`]}}
+ const a=pick([2,3]),b=a*a,c=a**3;let m,n,p,r,q;do{m=ri(2,4);n=ri(2,3);p=ri(1,3);r=ri(1,a===2?6:3);q=(m*n+2*p-r)/3}while(!Number.isInteger(q)||q<1);
+ return{q:Q('Вычислите:',F(`(${pw(a,m)})<sup>${n}</sup> · ${pw(b,p)}`,pw(c,q))),a:a**r,steps:[`Запишем всё через степени ${a}: ${b} = ${pw(a,2)}, ${c} = ${pw(a,3)}.`,`Числитель: ${pw(a,m*n)} · ${pw(a,2*p)} = ${pw(a,m*n+2*p)}.`,`Знаменатель: (${pw(a,3)})<sup>${q}</sup> = ${pw(a,3*q)}.`,`${pw(a,m*n+2*p)} : ${pw(a,3*q)} = ${pw(a,r)} = ${a**r}.`]}}},
+
+{id:'fsu',g:7,t:'Формулы сокращённого умножения',d:'Квадрат суммы и разности, разность квадратов.',
+th:`<h3>Три главные формулы</h3><div class="rule"><div>(<i>a</i> + <i>b</i>)² = <i>a</i>² + 2<i>ab</i> + <i>b</i>²</div><div>(<i>a</i> − <i>b</i>)² = <i>a</i>² − 2<i>ab</i> + <i>b</i>²</div><div><i>a</i>² − <i>b</i>² = (<i>a</i> − <i>b</i>)(<i>a</i> + <i>b</i>)</div></div>
+<h3>Быстрый счёт</h3><p>Формулы помогают считать в уме:</p><div class="rule"><div>31² = (30 + 1)² = 900 + 60 + 1 = 961</div><div>67² − 33² = (67 − 33)(67 + 33) = 34 · 100 = 3400</div></div>
+<h3>Упрощение выражений</h3><p>Прежде чем подставлять число, раскройте скобки по формулам и приведите подобные слагаемые — часто почти всё сокращается.</p>
+<p class="note">Частая ошибка: (<i>a</i> + <i>b</i>)² ≠ <i>a</i>² + <i>b</i>². Не забывайте удвоенное произведение 2<i>ab</i>.</p>
+<h3>Ещё две формулы</h3><div class="rule"><div><i>a</i>³ + <i>b</i>³ = (<i>a</i> + <i>b</i>)(<i>a</i>² − <i>ab</i> + <i>b</i>²)</div><div><i>a</i>³ − <i>b</i>³ = (<i>a</i> − <i>b</i>)(<i>a</i>² + <i>ab</i> + <i>b</i>²)</div></div>`,
+gen(l){
+ if(l===1){const t=ri(2,9),s=ri(1,2),pl=coin(),k=pl?10*t+s:10*t-s,op=pl?'+':'−';
+  return{q:Q('Вычислите удобным способом:',`${k}²`),a:k*k,steps:[`${k} = ${10*t} ${op} ${s}. Применяем формулу квадрата ${pl?'суммы':'разности'}.`,`${k}² = ${10*t}² ${op} 2 · ${10*t} · ${s} + ${s}² = ${100*t*t} ${op} ${20*t*s} + ${s*s} = ${k*k}.`]}}
+ if(l===2){let a,b;if(coin()){a=ri(51,89);b=100-a}else{b=ri(21,70);a=b+pick([10,20,30])}
+  return{q:Q('Вычислите удобным способом:',`${a}² − ${b}²`),a:a*a-b*b,steps:[`Разность квадратов: <i>a</i>² − <i>b</i>² = (<i>a</i> − <i>b</i>)(<i>a</i> + <i>b</i>).`,`(${a} − ${b})(${a} + ${b}) = ${a-b} · ${a+b} = ${a*a-b*b}.`]}}
+ const a=ri(2,9),x=pick([-2.5,-1.5,-.5,.5,1.5,2.5,.25,-.25,.75,-.75,1.25]);
+ if(coin()){const v=2*a*x+2*a*a;
+  return{q:Q(`Упростите выражение и найдите его значение при ${X} = ${N(x)}:`,`(${X} + ${a})² − (${X} − ${a})(${X} + ${a})`),a:v,steps:[`(${X} + ${a})² = ${X2} + ${2*a}${X} + ${a*a}; (${X} − ${a})(${X} + ${a}) = ${X2} − ${a*a}.`,`${X2} + ${2*a}${X} + ${a*a} − ${X2} + ${a*a} = ${2*a}${X} + ${2*a*a}.`,`При ${X} = ${N(x)}: ${2*a} · ${P(x)} + ${2*a*a} = ${N(2*a*x)} + ${2*a*a} = ${N(v)}.`]}}
+ const v=4*a*x;
+ return{q:Q(`Упростите выражение и найдите его значение при ${X} = ${N(x)}:`,`(${X} + ${a})² − (${X} − ${a})²`),a:v,steps:[`(${X} + ${a})² = ${X2} + ${2*a}${X} + ${a*a}; (${X} − ${a})² = ${X2} − ${2*a}${X} + ${a*a}.`,`Разность: ${4*a}${X}.`,`При ${X} = ${N(x)}: ${4*a} · ${P(x)} = ${N(v)}.`]}}},
+
+{id:'linfn',g:7,t:'Линейная функция',d:'Функция y = kx + b: значения, угловой коэффициент, пересечение прямых.',
+th:`<h3>Определение</h3><p>Линейная функция задаётся формулой ${Y} = <i>k</i>${X} + <i>b</i>. Её график — прямая.</p>
+<ul><li><i>k</i> — <b>угловой коэффициент</b>: при <i>k</i> > 0 функция возрастает, при <i>k</i> < 0 — убывает;</li><li><i>b</i> — ордината точки пересечения с осью O<i>y</i>: точка (0; <i>b</i>).</li></ul>
+<h3>Значение функции и аргумента</h3><p>Чтобы найти ${Y}, подставьте ${X}. Чтобы найти ${X} по известному ${Y}, решите линейное уравнение.</p>
+<div class="rule">${Y} = 3${X} − 4: при ${X} = 2 получаем ${Y} = 2; если ${Y} = 11, то 3${X} = 15, ${X} = 5</div>
+<h3>Прямая через две точки</h3><div class="rule"><i>k</i> = ${F(`${sub(Y,2)} − ${sub(Y,1)}`,`${sub(X,2)} − ${sub(X,1)}`)}, &nbsp; <i>b</i> = ${sub(Y,1)} − <i>k</i>${sub(X,1)}</div>
+<h3>Взаимное расположение</h3><p>При одинаковых <i>k</i> прямые параллельны. При разных — пересекаются; абсциссу точки пересечения находят из уравнения <i>k</i>₁${X} + <i>b</i>₁ = <i>k</i>₂${X} + <i>b</i>₂.</p>`,
+gen(l){
+ if(l===1){const k=rnz(-6,6),b=rnz(-10,10),x=rnz(-6,6),y=k*x+b;
+  return{q:Q(`Функция задана формулой ${Y} = ${poly([[k,X],[b,'']])}. Найдите значение ${Y} при ${X} = ${N(x)}.`),a:y,steps:[`Подставляем: ${Y} = ${N(k)} · ${P(x)}${sg(b)} = ${N(k*x)}${sg(b)} = ${N(y)}.`]}}
+ if(l===2){let k;do k=rnz(-6,6);while(Math.abs(k)<2);const b=rnz(-10,10),x=rnz(-8,8),y=k*x+b;
+  return{q:Q(`Функция задана формулой ${Y} = ${poly([[k,X],[b,'']])}. При каком значении ${X} значение функции равно ${N(y)}?`),a:x,steps:[`${N(y)} = ${poly([[k,X],[b,'']])}.`,`${poly([[k,X]])} = ${N(y)} − ${P(b)} = ${N(y-b)}.`,`${X} = ${N(y-b)} : ${P(k)} = ${N(x)}.`]}}
+ if(coin()){const k=rnz(-5,5),b=rnz(-10,10);let x1,x2;do{x1=ri(-5,5);x2=ri(-5,5)}while(x1===x2);const y1=k*x1+b,y2=k*x2+b,askB=coin();
+  return{q:Q(`Прямая ${Y} = <i>k</i>${X} + <i>b</i> проходит через точки A(${N(x1)}; ${N(y1)}) и B(${N(x2)}; ${N(y2)}). Найдите ${askB?'<i>b</i>':'<i>k</i>'}.`),a:askB?b:k,steps:[`<i>k</i> = ${F(`${N(y2)} − ${P(y1)}`,`${N(x2)} − ${P(x1)}`)} = ${F(N(y2-y1),N(x2-x1))} = ${N(k)}.`,`<i>b</i> = ${sub(Y,1)} − <i>k</i>${sub(X,1)} = ${N(y1)} − ${P(k)} · ${P(x1)} = ${N(b)}.`]}}
+ let k1,k2;do{k1=rnz(-5,5);k2=rnz(-5,5)}while(k1===k2);const x0=rnz(-6,6),b1=rnz(-10,10),b2=k1*x0+b1-k2*x0;
+ return{q:Q(`Найдите абсциссу точки пересечения графиков функций ${Y} = ${poly([[k1,X],[b1,'']])} и ${Y} = ${poly([[k2,X],[b2,'']])}.`),a:x0,steps:[`В точке пересечения значения ${Y} равны: ${poly([[k1,X],[b1,'']])} = ${poly([[k2,X],[b2,'']])}.`,`${poly([[k1-k2,X]])} = ${N(b2)} − ${P(b1)} = ${N(b2-b1)}.`,`${X} = ${N(b2-b1)} : ${P(k1-k2)} = ${N(x0)}.`]}}},
+
+/* ---------- 8 класс ---------- */
+{id:'sqrt',g:8,t:'Квадратные корни',d:'Арифметический корень, свойства корней, вычисления с корнями.',
+th:`<h3>Определение</h3><p>Арифметический квадратный корень ${S('<i>a</i>')} — неотрицательное число, квадрат которого равен <i>a</i>. Корень определён только при <i>a</i> ≥ 0.</p><div class="rule">${S(49)} = 7, так как 7 ≥ 0 и 7² = 49</div>
+<h3>Свойства</h3><div class="rule"><div>${S('<i>ab</i>')} = ${S('<i>a</i>')} · ${S('<i>b</i>')} &nbsp;&nbsp; ${S(F('<i>a</i>','<i>b</i>'))} = ${F(S('<i>a</i>'),S('<i>b</i>'))}</div><div>(${S('<i>a</i>')})² = <i>a</i> &nbsp;&nbsp; ${S('<i>a</i>²')} = |<i>a</i>|</div></div>
+<h3>Приёмы</h3><ul><li>Произведение под корнем: ${S('16 · 25')} = 4 · 5 = 20.</li><li>Вынесение множителя: ${S(72)} = ${S('36 · 2')} = 6${S(2)}.</li><li>Разность квадратов: (${S(7)} − ${S(3)})(${S(7)} + ${S(3)}) = 7 − 3 = 4.</li></ul>
+<p class="note">Полезно помнить квадраты чисел от 11 до 20: 121, 144, 169, 196, 225, 256, 289, 324, 361, 400.</p>`,
+gen(l){
+ if(l===1){if(coin()){const n=ri(2,20);return{q:Q('Вычислите:',S(n*n)),a:n,steps:[`${n}² = ${n*n} и ${n} ≥ 0, поэтому ${S(n*n)} = ${n}.`]}}
+  const [a,b]=pick([[2,8],[3,12],[2,18],[5,20],[3,27],[2,32],[6,24],[5,45],[7,28],[2,50],[3,48]]),r=Math.sqrt(a*b);
+  return{q:Q('Вычислите:',`${S(a)} · ${S(b)}`),a:r,steps:[`${S(a)} · ${S(b)} = ${S(`${a} · ${b}`)} = ${S(a*b)} = ${r}.`]}}
+ if(l===2){if(coin()){const p=ri(2,12),q=ri(2,12);return{q:Q('Вычислите:',S(`${p*p} · ${q*q}`)),a:p*q,steps:[`Корень из произведения равен произведению корней: ${S(p*p)} · ${S(q*q)} = ${p} · ${q} = ${p*q}.`]}}
+  const n=pick([2,3,5,6,7]),k=ri(2,9),m=n*k*k;return{q:Q('Вычислите:',F(S(m),S(n))),a:k,steps:[`${F(S(m),S(n))} = ${S(F(m,n))} = ${S(k*k)} = ${k}.`]}}
+ const t=ri(0,2);
+ if(t===0){let a,b;const ns=[2,3,5,6,7,8,10,11,12,13,14,15,17,18,19,20,21,22,23];do{a=pick(ns);b=pick(ns)}while(a===b);
+  return{q:Q('Вычислите:',`(${S(a)} − ${S(b)})(${S(a)} + ${S(b)})`),a:a-b,steps:[`Разность квадратов: (${S(a)})² − (${S(b)})².`,`${a} − ${b} = ${N(a-b)}.`]}}
+ if(t===1){const k=ri(2,9),m=pick([2,3,5,6,7]);return{q:Q('Вычислите:',`(${k}${S(m)})²`),a:k*k*m,steps:[`(${k}${S(m)})² = ${k}² · (${S(m)})² = ${k*k} · ${m} = ${k*k*m}.`]}}
+ const [a,b,c]=triple(60);
+ return{q:Q('Вычислите:',S(`${c}² − ${b}²`)),a:a,steps:[`По формуле разности квадратов: ${c}² − ${b}² = (${c} − ${b})(${c} + ${b}) = ${c-b} · ${c+b} = ${a*a}.`,`${S(a*a)} = ${a}.`]}}},
+
+{id:'quad',g:8,t:'Квадратные уравнения',d:'Неполные уравнения, дискриминант, теорема Виета.',
+th:`<h3>Вид уравнения</h3><p><i>a</i>${X2} + <i>b</i>${X} + <i>c</i> = 0, где <i>a</i> ≠ 0.</p>
+<h3>Неполные уравнения</h3><ul><li>${X2} − 9 = 0 ⇒ ${X2} = 9 ⇒ ${X} = ±3.</li><li>${X2} − 5${X} = 0 ⇒ ${X}(${X} − 5) = 0 ⇒ ${X} = 0 или ${X} = 5.</li></ul>
+<h3>Формула корней</h3><div class="rule"><div><i>D</i> = <i>b</i>² − 4<i>ac</i></div><div>${sub(X,'1,2')} = ${F('−<i>b</i> ± '+S('<i>D</i>'),'2<i>a</i>')}</div></div>
+<p>Если <i>D</i> > 0 — два корня, <i>D</i> = 0 — один, <i>D</i> < 0 — действительных корней нет.</p>
+<h3>Теорема Виета</h3><p>Для ${X2} + <i>p</i>${X} + <i>q</i> = 0: &nbsp; ${sub(X,1)} + ${sub(X,2)} = −<i>p</i>, &nbsp; ${sub(X,1)} · ${sub(X,2)} = <i>q</i>. Удобно для подбора и проверки корней.</p>
+<div class="rule">${X2} − 7${X} + 12 = 0: сумма 7, произведение 12 ⇒ корни 3 и 4</div>`,
+gen(l){
+ if(l===1){if(coin()){const k=ri(2,12);return{q:Q('Найдите больший корень уравнения:',`${X2} − ${k*k} = 0`),a:k,steps:[`${X2} = ${k*k}.`,`${X} = ±${S(k*k)} = ±${k}.`,`Больший корень: ${k}.`]}}
+  const k=rnz(-12,12);return{q:Q('Найдите корень уравнения, отличный от нуля:',`${poly([[1,X2],[-k,X]])} = 0`),a:k,steps:[`Выносим ${X} за скобки: ${X}(${X}${sg(-k)}) = 0.`,`Произведение равно нулю, если хотя бы один множитель равен нулю: ${X} = 0 или ${X} = ${N(k)}.`]}}
+ const big=coin(),wh=big?'больший':'меньший';
+ if(l===2){let r1,r2;do{r1=ri(-9,9);r2=ri(-9,9)}while(r1===r2);const lo=Math.min(r1,r2),hi=Math.max(r1,r2),p=-(r1+r2),q=r1*r2,D=p*p-4*q,sd=Math.sqrt(D);
+  return{q:Q(`Найдите ${wh} корень уравнения:`,`${poly([[1,X2],[p,X],[q,'']])} = 0`),a:big?hi:lo,steps:[`<i>D</i> = ${P(p)}² − 4 · 1 · ${P(q)} = ${p*p}${sg(-4*q)} = ${D}, ${S(D)} = ${sd}.`,`${sub(X,'1,2')} = ${F(`${N(-p)} ± ${sd}`,2)}: ${sub(X,1)} = ${N(lo)}, ${sub(X,2)} = ${N(hi)}.`,`Проверка по Виета: ${N(lo)} + ${P(hi)} = ${N(-p)}, ${N(lo)} · ${P(hi)} = ${N(q)}.`,`${big?'Больший':'Меньший'} корень: ${N(big?hi:lo)}.`]}}
+ let a,m,n;do{a=ri(2,5);m=rnz(-9,9);n=rnz(-6,6)}while(gcd(m,a)!==1);
+ const B=-(a*n+m),C=m*n,D=B*B-4*a*C,sd=Math.abs(a*n-m),x1=R(-B-sd,2*a),x2=R(-B+sd,2*a),lo=rv(x1)<rv(x2)?x1:x2,hi=lo===x1?x2:x1,r=big?hi:lo;
+ return{q:Q(`Найдите ${wh} корень уравнения:`,`${poly([[a,X2],[B,X],[C,'']])} = 0`),a:rv(r),ans:rh(r),steps:[`<i>D</i> = ${P(B)}² − 4 · ${a} · ${P(C)} = ${D}, ${S(D)} = ${sd}.`,`${sub(X,'1,2')} = ${F(`${N(-B)} ± ${sd}`,2*a)}.`,`${sub(X,1)} = ${F(N(-B-sd),2*a)} = ${rh(x1)}, ${sub(X,2)} = ${F(N(-B+sd),2*a)} = ${rh(x2)}.`,`${big?'Больший':'Меньший'} корень: ${rh(r)}.`]}}},
+
+{id:'pyth',g:8,t:'Теорема Пифагора',d:'Связь катетов и гипотенузы, применение к ромбу, прямоугольнику, треугольникам.',
+th:`<h3>Теорема</h3><p>В прямоугольном треугольнике квадрат гипотенузы равен сумме квадратов катетов:</p><div class="rule"><i>c</i>² = <i>a</i>² + <i>b</i>²</div>
+<p>Отсюда: <i>c</i> = ${S('<i>a</i>² + <i>b</i>²')}, &nbsp; <i>a</i> = ${S('<i>c</i>² − <i>b</i>²')}.</p>
+<h3>Пифагоровы тройки</h3><p>Целые стороны прямоугольных треугольников, которые полезно помнить: 3, 4, 5; 5, 12, 13; 8, 15, 17; 7, 24, 25 — и их кратные (6, 8, 10; 9, 12, 15…).</p>
+<h3>Где ищут прямоугольный треугольник</h3><ul><li><b>Прямоугольник:</b> диагональ делит его на два прямоугольных треугольника.</li><li><b>Ромб:</b> диагонали перпендикулярны и делятся пополам, сторона — гипотенуза.</li><li><b>Равнобедренный треугольник:</b> высота к основанию делит основание пополам.</li></ul>
+<p class="note">Гипотенуза — самая длинная сторона, она лежит напротив прямого угла.</p>`,
+gen(l){
+ const [a,b,c]=triple(60);
+ if(l===1)return{q:Q(`Катеты прямоугольного треугольника равны ${a} и ${b}. Найдите гипотенузу.`),a:c,steps:[`<i>c</i>² = ${a}² + ${b}² = ${a*a} + ${b*b} = ${c*c}.`,`<i>c</i> = ${S(c*c)} = ${c}.`]};
+ if(l===2)return{q:Q(`Гипотенуза прямоугольного треугольника равна ${c}, один из катетов равен ${a}. Найдите второй катет.`),a:b,steps:[`<i>b</i>² = ${c}² − ${a}² = ${c*c} − ${a*a} = ${b*b}.`,`<i>b</i> = ${S(b*b)} = ${b}.`]};
+ const t=ri(0,2);
+ if(t===0)return{q:Q(`Диагонали ромба равны ${2*a} и ${2*b}. Найдите сторону ромба.`),a:c,steps:[`Диагонали ромба перпендикулярны и делятся точкой пересечения пополам: половины равны ${a} и ${b}.`,`Сторона — гипотенуза: ${S(`${a}² + ${b}²`)} = ${S(c*c)} = ${c}.`]};
+ if(t===1)return{q:Q(`В равнобедренном треугольнике основание равно ${2*a}, а боковая сторона — ${c}. Найдите высоту, проведённую к основанию.`),a:b,steps:[`Высота к основанию делит его пополам: ${2*a} : 2 = ${a}.`,`<i>h</i> = ${S(`${c}² − ${a}²`)} = ${S(c*c-a*a)} = ${b}.`]};
+ return{q:Q(`Одна сторона прямоугольника равна ${a}, а диагональ — ${c}. Найдите площадь прямоугольника.`),a:a*b,steps:[`Вторая сторона: ${S(`${c}² − ${a}²`)} = ${S(b*b)} = ${b}.`,`<i>S</i> = ${a} · ${b} = ${a*b}.`]}}},
+
+{id:'area',g:8,t:'Площади фигур',d:'Прямоугольник, треугольник, параллелограмм, ромб, трапеция.',
+th:`<h3>Основные формулы</h3><div class="rule"><div>Прямоугольник: <i>S</i> = <i>ab</i></div><div>Параллелограмм: <i>S</i> = <i>ah</i></div><div>Треугольник: <i>S</i> = ${F(1,2)}<i>ah</i></div><div>Ромб: <i>S</i> = ${F(1,2)}${sub('<i>d</i>',1)}${sub('<i>d</i>',2)}</div><div>Трапеция: <i>S</i> = ${F('<i>a</i> + <i>b</i>',2)} · <i>h</i></div></div>
+<p>Здесь <i>h</i> — высота, проведённая к стороне <i>a</i> (для трапеции — расстояние между основаниями <i>a</i> и <i>b</i>).</p>
+<h3>Прямоугольный треугольник</h3><p>Его катеты перпендикулярны, поэтому один служит высотой к другому: <i>S</i> = ${F(1,2)}<i>ab</i>.</p>
+<h3>Когда высоты нет в условии</h3><p>Найдите её по теореме Пифагора. В равнобедренной трапеции высоты из вершин меньшего основания отсекают от большего два равных отрезка длиной ${F('<i>b</i> − <i>a</i>',2)}.</p>
+<p class="note">Площадь измеряется в квадратных единицах: см², м². Проверяйте, что все длины даны в одних единицах.</p>`,
+gen(l){
+ if(l===1){if(coin()){const a=ri(2,20),b=ri(2,20);return{q:Q(`Стороны прямоугольника равны ${a} и ${b}. Найдите его площадь.`),a:a*b,steps:[`<i>S</i> = <i>ab</i> = ${a} · ${b} = ${a*b}.`]}}
+  let a,h;do{a=ri(2,20);h=ri(2,20)}while(a*h%2);return{q:Q(`Сторона треугольника равна ${a}, а высота, проведённая к ней, — ${h}. Найдите площадь треугольника.`),a:a*h/2,steps:[`<i>S</i> = ${F(1,2)}<i>ah</i> = ${F(1,2)} · ${a} · ${h} = ${a*h/2}.`]}}
+ if(l===2){const t=ri(0,2);
+  if(t===0){let a,b,h;do{a=ri(2,15);b=ri(a+1,25);h=ri(2,14)}while((a+b)*h%2);return{q:Q(`Основания трапеции равны ${a} и ${b}, высота — ${h}. Найдите площадь трапеции.`),a:(a+b)*h/2,steps:[`<i>S</i> = ${F('<i>a</i> + <i>b</i>',2)} · <i>h</i> = ${F(`${a} + ${b}`,2)} · ${h} = ${N((a+b)/2)} · ${h} = ${(a+b)*h/2}.`]}}
+  if(t===1){const a=ri(3,20),h=ri(2,15);return{q:Q(`Сторона параллелограмма равна ${a}, а высота, проведённая к ней, — ${h}. Найдите площадь.`),a:a*h,steps:[`<i>S</i> = <i>ah</i> = ${a} · ${h} = ${a*h}.`]}}
+  let d1,d2;do{d1=ri(2,24);d2=ri(2,24)}while(d1*d2%2);return{q:Q(`Диагонали ромба равны ${d1} и ${d2}. Найдите его площадь.`),a:d1*d2/2,steps:[`<i>S</i> = ${F(1,2)}${sub('<i>d</i>',1)}${sub('<i>d</i>',2)} = ${F(1,2)} · ${d1} · ${d2} = ${d1*d2/2}.`]}}
+ if(coin()){const [p,q,c]=triple(40),a=ri(2,15),b=a+2*p,Sv=(a+p)*q;
+  return{q:Q(`Основания равнобедренной трапеции равны ${a} и ${b}, боковая сторона — ${c}. Найдите площадь трапеции.`),a:Sv,steps:[`Высоты из вершин меньшего основания отсекают от большего два равных отрезка: (${b} − ${a}) : 2 = ${p}.`,`Высота по теореме Пифагора: <i>h</i> = ${S(`${c}² − ${p}²`)} = ${S(q*q)} = ${q}.`,`<i>S</i> = ${F(`${a} + ${b}`,2)} · ${q} = ${a+p} · ${q} = ${Sv}.`]}}
+ let a,b,c;do{[a,b,c]=triple(60)}while(a*b%2);
+ return{q:Q(`Гипотенуза прямоугольного треугольника равна ${c}, один из катетов — ${a}. Найдите площадь треугольника.`),a:a*b/2,steps:[`Второй катет: ${S(`${c}² − ${a}²`)} = ${S(b*b)} = ${b}.`,`<i>S</i> = ${F(1,2)} · ${a} · ${b} = ${a*b/2}.`]}}},
+
+/* ---------- 9 класс ---------- */
+{id:'ap',g:9,t:'Арифметическая прогрессия',d:'Разность прогрессии, формула n-го члена, сумма первых n членов.',
+th:`<h3>Определение</h3><p>Последовательность, в которой каждый член, начиная со второго, равен предыдущему плюс одно и то же число <i>d</i> — <b>разность</b> прогрессии.</p><div class="rule">2; 5; 8; 11; … &nbsp; <i>d</i> = 3</div>
+<h3>Формулы</h3><div class="rule"><div>${sub('<i>a</i>','<i>n</i>')} = ${sub('<i>a</i>',1)} + (<i>n</i> − 1)<i>d</i></div><div>${sub('<i>S</i>','<i>n</i>')} = ${F(`${sub('<i>a</i>',1)} + ${sub('<i>a</i>','<i>n</i>')}`,2)} · <i>n</i> = ${F(`2${sub('<i>a</i>',1)} + (<i>n</i> − 1)<i>d</i>`,2)} · <i>n</i></div></div>
+<h3>Два известных члена</h3><p>Если известны ${sub('<i>a</i>','<i>m</i>')} и ${sub('<i>a</i>','<i>k</i>')}, то ${sub('<i>a</i>','<i>k</i>')} − ${sub('<i>a</i>','<i>m</i>')} = (<i>k</i> − <i>m</i>)<i>d</i>. Отсюда находят <i>d</i>, а затем любой член.</p>
+<p class="note">Характеристическое свойство: каждый член (кроме первого) — среднее арифметическое соседних: ${sub('<i>a</i>','<i>n</i>')} = ${F(`${sub('<i>a</i>','<i>n</i>−1')} + ${sub('<i>a</i>','<i>n</i>+1')}`,2)}.</p>`,
+gen(l){
+ const a1=rnz(-20,20),d=rnz(-7,7);
+ if(l===1){const n=ri(5,20),an=a1+(n-1)*d;return{q:Q(`В арифметической прогрессии ${sub('<i>a</i>',1)} = ${N(a1)}, <i>d</i> = ${N(d)}. Найдите ${sub('<i>a</i>',n)}.`),a:an,steps:[`${sub('<i>a</i>','<i>n</i>')} = ${sub('<i>a</i>',1)} + (<i>n</i> − 1)<i>d</i>.`,`${sub('<i>a</i>',n)} = ${N(a1)} + ${n-1} · ${P(d)} = ${N(a1)}${sg((n-1)*d)} = ${N(an)}.`]}}
+ if(l===2){const n=ri(6,20),top=2*a1+(n-1)*d,Sn=top*n/2;return{q:Q(`Дана арифметическая прогрессия: ${N(a1)}; ${N(a1+d)}; ${N(a1+2*d)}; … Найдите сумму первых ${n} членов.`),a:Sn,steps:[`Разность: <i>d</i> = ${N(a1+d)} − ${P(a1)} = ${N(d)}.`,`${sub('<i>S</i>','<i>n</i>')} = ${F(`2${sub('<i>a</i>',1)} + (<i>n</i> − 1)<i>d</i>`,2)} · <i>n</i>.`,`${sub('<i>S</i>',n)} = ${F(`2 · ${P(a1)} + ${n-1} · ${P(d)}`,2)} · ${n} = ${F(N(top),2)} · ${n} = ${N(Sn)}.`]}}
+ const m=ri(2,6),k=m+ri(2,8),n=k+ri(1,12),am=a1+(m-1)*d,ak=a1+(k-1)*d,an=a1+(n-1)*d;
+ return{q:Q(`В арифметической прогрессии ${sub('<i>a</i>',m)} = ${N(am)}, ${sub('<i>a</i>',k)} = ${N(ak)}. Найдите ${sub('<i>a</i>',n)}.`),a:an,steps:[`${sub('<i>a</i>',k)} − ${sub('<i>a</i>',m)} = (${k} − ${m})<i>d</i>, поэтому <i>d</i> = ${F(`${N(ak)} − ${P(am)}`,k-m)} = ${F(N(ak-am),k-m)} = ${N(d)}.`,`${sub('<i>a</i>',n)} = ${sub('<i>a</i>',m)} + (${n} − ${m})<i>d</i> = ${N(am)} + ${n-m} · ${P(d)} = ${N(an)}.`]}}},
+
+{id:'gp',g:9,t:'Геометрическая прогрессия',d:'Знаменатель, формула n-го члена, суммы конечной и бесконечной прогрессии.',
+th:`<h3>Определение</h3><p>Последовательность ненулевых чисел, в которой каждый член, начиная со второго, равен предыдущему, умноженному на одно и то же число <i>q</i> ≠ 0 — <b>знаменатель</b>.</p><div class="rule">3; 6; 12; 24; … &nbsp; <i>q</i> = 2</div>
+<h3>Формулы</h3><div class="rule"><div>${sub('<i>b</i>','<i>n</i>')} = ${sub('<i>b</i>',1)} · <i>q</i><sup><i>n</i> − 1</sup></div><div>${sub('<i>S</i>','<i>n</i>')} = ${F(`${sub('<i>b</i>',1)}(<i>q</i><sup><i>n</i></sup> − 1)`,'<i>q</i> − 1')} &nbsp; (<i>q</i> ≠ 1)</div></div>
+<h3>Бесконечно убывающая прогрессия</h3><p>Если |<i>q</i>| < 1, сумма всех членов конечна:</p><div class="rule"><i>S</i> = ${F(sub('<i>b</i>',1),'1 − <i>q</i>')} &nbsp;&nbsp; 1 + ${F(1,2)} + ${F(1,4)} + … = ${F(1,`1 − ${F(1,2)}`)} = 2</div>
+<p class="note">Знаменатель находят делением: <i>q</i> = ${sub('<i>b</i>',2)} : ${sub('<i>b</i>',1)}. При отрицательном <i>q</i> знаки членов чередуются.</p>`,
+gen(l){
+ if(l===1){const b1=rnz(-5,5),q=pick([2,3,-2,-3]),n=ri(3,Math.abs(q)===2?7:5),bn=b1*q**(n-1);
+  return{q:Q(`В геометрической прогрессии ${sub('<i>b</i>',1)} = ${N(b1)}, <i>q</i> = ${N(q)}. Найдите ${sub('<i>b</i>',n)}.`),a:bn,steps:[`${sub('<i>b</i>','<i>n</i>')} = ${sub('<i>b</i>',1)} · <i>q</i><sup><i>n</i> − 1</sup>.`,`${sub('<i>b</i>',n)} = ${N(b1)} · ${pw(q,n-1)} = ${N(b1)} · ${P(q**(n-1))} = ${N(bn)}.`]}}
+ if(l===2){const b1=rnz(-5,5),q=pick([2,3,-2]),n=ri(4,q===3?5:7),Sn=b1*(q**n-1)/(q-1);
+  return{q:Q(`Дана геометрическая прогрессия: ${N(b1)}; ${N(b1*q)}; ${N(b1*q*q)}; … Найдите сумму первых ${n} членов.`),a:Sn,steps:[`Знаменатель: <i>q</i> = ${N(b1*q)} : ${P(b1)} = ${N(q)}.`,`${sub('<i>S</i>',n)} = ${F(`${N(b1)} · (${pw(q,n)} − 1)`,`${P(q)} − 1`)} = ${F(`${N(b1)} · ${P(q**n-1)}`,N(q-1))} = ${N(Sn)}.`]}}
+ const m=ri(2,5),s=coin()?1:-1,b1=ri(2,30),q=R(s,m),Sv=R(b1*m,m-s);
+ return{q:Q(`Найдите сумму бесконечно убывающей геометрической прогрессии: ${N(b1)}; ${rh(R(b1*s,m))}; ${rh(R(b1,m*m))}; …`),a:rv(Sv),ans:ansR(Sv),steps:[`<i>q</i> = ${rh(R(b1*s,m))} : ${N(b1)} = ${rh(q)}; |<i>q</i>| < 1.`,`<i>S</i> = ${F(sub('<i>b</i>',1),'1 − <i>q</i>')} = ${F(N(b1),`1 − ${rhP(q)}`)} = ${N(b1)} : ${rh(R(m-s,m))} = ${rh(Sv)}.`]}}},
+
+{id:'systems',g:9,t:'Системы уравнений',d:'Способы подстановки и сложения, нелинейные системы.',
+th:`<h3>Что значит решить систему</h3><p>Найти все пары (${X}; ${Y}), которые одновременно обращают в верное равенство каждое уравнение системы.</p>
+<h3>Способ сложения</h3><p>Умножаем уравнения на числа так, чтобы коэффициенты при одной переменной стали противоположными, и складываем:</p>
+<div class="rule">${sys(`${X} + ${Y} = 7`,`${X} − ${Y} = 3`)} &nbsp;⇒&nbsp; 2${X} = 10, ${X} = 5, ${Y} = 2</div>
+<h3>Способ подстановки</h3><p>Выражаем одну переменную из одного уравнения и подставляем в другое: из ${Y} = 2${X} − 1 и 3${X} + ${Y} = 9 получаем 5${X} − 1 = 9, ${X} = 2, ${Y} = 3.</p>
+<h3>Нелинейные системы</h3><p>Помогают формулы сокращённого умножения:</p><div class="rule"><div>${X2} − ${Y}² = (${X} − ${Y})(${X} + ${Y})</div><div>${X2} + ${Y}² = (${X} + ${Y})² − 2${X}${Y}</div></div>
+<p class="note">Иногда искомую величину можно найти, не решая систему до конца.</p>`,
+gen(l){
+ const x=rnz(-10,10),y=rnz(-10,10),askX=coin(),v=askX?X:Y;
+ if(l===1){const s=x+y,d=x-y;return{q:Q(`Решите систему и укажите значение ${v}:`,sys(`${X} + ${Y} = ${N(s)}`,`${X} − ${Y} = ${N(d)}`)),a:askX?x:y,steps:[`Складываем уравнения: 2${X} = ${N(s)} + ${P(d)} = ${N(s+d)}, ${X} = ${N(x)}.`,`Из первого уравнения: ${Y} = ${N(s)} − ${P(x)} = ${N(y)}.`]}}
+ if(l===2){let a1,b1,a2,b2;do{a1=rnz(-5,5);b1=rnz(-5,5);a2=rnz(-5,5);b2=rnz(-5,5)}while(a1*b2-a2*b1===0);const x2=rnz(-8,8),y2=rnz(-8,8),c1=a1*x2+b1*y2,c2=a2*x2+b2*y2;
+  return{q:Q(`Решите систему и укажите значение ${v}:`,sys(`${poly([[a1,X],[b1,Y]])} = ${N(c1)}`,`${poly([[a2,X],[b2,Y]])} = ${N(c2)}`)),a:askX?x2:y2,steps:[`Умножим первое уравнение на ${P(a2)}, второе — на ${P(a1)} и вычтем: ${X} исчезнет.`,`(${N(b1)} · ${P(a2)} − ${P(b2)} · ${P(a1)})${Y} = ${N(c1)} · ${P(a2)} − ${P(c2)} · ${P(a1)}.`,`${poly([[b1*a2-b2*a1,Y]])} = ${N(c1*a2-c2*a1)}, ${Y} = ${N(y2)}.`,`Подставим в первое уравнение: ${poly([[a1,X]])}${sg(b1*y2)} = ${N(c1)}, ${X} = ${N(x2)}.`]}}
+ if(coin()){let x3,y3;do{x3=rnz(-9,9);y3=rnz(-9,9)}while(x3+y3===0);const s=x3+y3,t=x3*x3-y3*y3,d=x3-y3;
+  return{q:Q(`Решите систему и укажите значение ${X}:`,sys(`${X} + ${Y} = ${N(s)}`,`${X2} − ${Y}² = ${N(t)}`)),a:x3,steps:[`${X2} − ${Y}² = (${X} − ${Y})(${X} + ${Y}), поэтому ${N(s)}(${X} − ${Y}) = ${N(t)}, ${X} − ${Y} = ${N(d)}.`,`Складываем ${X} + ${Y} = ${N(s)} и ${X} − ${Y} = ${N(d)}: 2${X} = ${N(s+d)}, ${X} = ${N(x3)}.`]}}
+ const s=x+y,p=x*y,r=s*s-2*p;
+ return{q:Q(`Известно, что ${X} + ${Y} = ${N(s)} и ${X}${Y} = ${N(p)}. Найдите ${X2} + ${Y}².`),a:r,steps:[`${X2} + ${Y}² = (${X} + ${Y})² − 2${X}${Y}.`,`${P(s)}² − 2 · ${P(p)} = ${s*s}${sg(-2*p)} = ${N(r)}.`,`Решать систему до конца не нужно.`]}}},
+
+{id:'prob',g:9,t:'Вероятность и комбинаторика',d:'Классическая вероятность, перестановки, сочетания, независимые события.',
+th:`<h3>Классическая вероятность</h3><div class="rule"><i>P</i>(<i>A</i>) = ${F('<i>m</i>','<i>n</i>')}</div><p><i>n</i> — число всех равновозможных исходов, <i>m</i> — число благоприятных. Вероятность лежит от 0 до 1.</p>
+<p>Пример: при броске кубика вероятность выпадения чётного числа равна ${F(3,6)} = 0,5.</p>
+<h3>Правило умножения</h3><p>Если первый выбор можно сделать <i>a</i> способами, а второй — <i>b</i> способами, то пару выборов — <i>a</i> · <i>b</i> способами. Два кубика дают 6 · 6 = 36 исходов.</p>
+<h3>Перестановки и сочетания</h3><div class="rule"><div>Перестановки: <i>n</i>! = 1 · 2 · … · <i>n</i></div><div>Сочетания: C<sub><i>n</i></sub><sup><i>k</i></sup> = ${F('<i>n</i>!','<i>k</i>!(<i>n</i> − <i>k</i>)!')}</div></div>
+<p>Перестановки — когда важен порядок всех элементов; сочетания — когда выбираем <i>k</i> из <i>n</i> и порядок не важен.</p>
+<h3>Независимые события</h3><p>Вероятность того, что произойдут оба: <i>P</i>(<i>A</i>) · <i>P</i>(<i>B</i>). Вероятность «хотя бы одного» удобно считать через противоположное событие: 1 − <i>P</i>(ни одного).</p>`,
+gen(l){
+ if(l===1){if(coin()){const cs=[['красных','красный'],['синих','синий'],['зелёных','зелёный']],nums=[ri(2,10),ri(2,10),ri(1,8)],i=ri(0,2),tot=nums[0]+nums[1]+nums[2],r=R(nums[i],tot);
+   return{q:Q(`В коробке ${nums[0]} красных, ${nums[1]} синих и ${nums[2]} зелёных шаров. Наугад достают один шар. Какова вероятность, что он ${cs[i][1]}?`),a:rv(r),ans:rh(r),steps:[`Всего исходов: ${nums.join(' + ')} = ${tot}.`,`Благоприятных: ${nums[i]}.`,`<i>P</i> = ${F(nums[i],tot)}${r.d!==tot?` = ${rh(r)}`:''}.`]}}
+  const k=ri(1,5),r=R(6-k,6);return{q:Q(`Игральный кубик бросают один раз. Какова вероятность, что выпадет число больше ${k}?`),a:rv(r),ans:rh(r),steps:[`Всего исходов: 6.`,`Благоприятные: ${Array.from({length:6-k},(_,i)=>k+1+i).join(', ')} — их ${6-k}.`,`<i>P</i> = ${F(6-k,6)}${r.d!==6?` = ${rh(r)}`:''}.`]}}
+ if(l===2){const t=ri(0,2);
+  if(t===0){const s=ri(3,11),pr=[];for(let i=1;i<=6;i++)if(s-i>=1&&s-i<=6)pr.push(`(${i}; ${s-i})`);const r=R(pr.length,36);
+   return{q:Q(`Бросают два игральных кубика. Какова вероятность, что сумма очков равна ${s}?`),a:rv(r),ans:rh(r),steps:[`Всего исходов: 6 · 6 = 36.`,`Благоприятные пары: ${pr.join(', ')} — их ${pr.length}.`,`<i>P</i> = ${F(pr.length,36)}${r.d!==36?` = ${rh(r)}`:''}.`]}}
+  if(t===1){const n=ri(3,7);let f=1;for(let i=2;i<=n;i++)f*=i;return{q:Q(`Сколькими способами можно расставить ${n} разных книг на полке?`),a:f,steps:[`Важен порядок всех книг — это перестановки.`,`${n}! = ${Array.from({length:n},(_,i)=>i+1).join(' · ')} = ${f}.`]}}
+  const n=ri(15,30);return{q:Q(`В классе ${n} учеников. Сколькими способами можно выбрать старосту и его заместителя?`),a:n*(n-1),steps:[`Старосту выбираем ${n} способами, заместителя — из оставшихся ${n-1}.`,`По правилу умножения: ${n} · ${n-1} = ${n*(n-1)}.`]}}
+ const t=ri(0,2);
+ if(t===0){const n=ri(5,12),k=pick([2,3]),c=k===2?n*(n-1)/2:n*(n-1)*(n-2)/6;
+  return{q:Q(`Сколькими способами можно выбрать ${k} учеников из ${n} для участия в олимпиаде?`),a:c,steps:[`Порядок не важен — это сочетания: C<sub>${n}</sub><sup>${k}</sup> = ${F(`${n}!`,`${k}! · ${n-k}!`)}.`,`C<sub>${n}</sub><sup>${k}</sup> = ${F(k===2?`${n} · ${n-1}`:`${n} · ${n-1} · ${n-2}`,k===2?'1 · 2':'1 · 2 · 3')} = ${c}.`]}}
+ if(t===1){const p1=ri(5,9)/10,p2=ri(5,9)/10,r=Math.round(p1*p2*100)/100;
+  return{q:Q(`Два стрелка независимо друг от друга делают по одному выстрелу. Первый попадает с вероятностью ${N(p1)}, второй — ${N(p2)}. Найдите вероятность того, что попадут оба.`),a:r,steps:[`События независимы, поэтому вероятности перемножаются.`,`<i>P</i> = ${N(p1)} · ${N(p2)} = ${N(r)}.`]}}
+ const p=ri(5,9)/10,qv=Math.round((1-p)*10)/10,r=Math.round((1-qv*qv)*100)/100;
+ return{q:Q(`Стрелок попадает в мишень с вероятностью ${N(p)}. Он стреляет два раза. Найдите вероятность того, что он попадёт хотя бы один раз.`),a:r,steps:[`Противоположное событие — оба раза промах. Вероятность промаха: 1 − ${N(p)} = ${N(qv)}.`,`<i>P</i>(оба промаха) = ${N(qv)} · ${N(qv)} = ${N(qv*qv)}.`,`<i>P</i>(хотя бы одно попадание) = 1 − ${N(qv*qv)} = ${N(r)}.`]}}},
+
+/* ---------- 10 класс ---------- */
+{id:'expeq',g:10,t:'Показательные уравнения',d:'Приведение к одному основанию, вынесение множителя, замена переменной.',
+th:`<h3>Главная идея</h3><p>Если <i>a</i> > 0 и <i>a</i> ≠ 1, то из <i>a</i><sup><i>f</i></sup> = <i>a</i><sup><i>g</i></sup> следует <i>f</i> = <i>g</i>. Поэтому обе части записывают как степени одного основания.</p>
+<div class="rule">3<sup>2${X} − 1</sup> = 27 = 3<sup>3</sup> &nbsp;⇒&nbsp; 2${X} − 1 = 3 &nbsp;⇒&nbsp; ${X} = 2</div>
+<h3>Полезные записи</h3><div class="rule"><div>1 = <i>a</i><sup>0</sup> &nbsp;&nbsp; ${F(1,'<i>a</i><sup><i>n</i></sup>')} = <i>a</i><sup>−<i>n</i></sup> &nbsp;&nbsp; ${S('<i>a</i>')} = <i>a</i><sup>${F(1,2)}</sup></div></div>
+<h3>Вынесение общего множителя</h3><div class="rule">2<sup>${X} + 3</sup> + 2<sup>${X}</sup> = 72 &nbsp;⇒&nbsp; 2<sup>${X}</sup>(8 + 1) = 72 &nbsp;⇒&nbsp; 2<sup>${X}</sup> = 8, ${X} = 3</div>
+<h3>Замена переменной</h3><p>В уравнениях вида 4<sup>${X}</sup> − 3 · 2<sup>${X}</sup> − 4 = 0 вводят <i>t</i> = 2<sup>${X}</sup> > 0 и решают квадратное уравнение. Отрицательные значения <i>t</i> отбрасывают: показательная функция всегда положительна.</p>`,
+gen(l){
+ if(l===1){const a=pick([2,3,5]),n=ri(1,a===2?8:a===3?5:4);return{q:Q('Решите уравнение:',`${a}<sup>${X}</sup> = ${a**n}`),a:n,steps:[`${a**n} = ${pw(a,n)}, поэтому ${a}<sup>${X}</sup> = ${pw(a,n)}.`,`Основания равны — равны и показатели: ${X} = ${n}.`]}}
+ if(l===2){const a=pick([2,3]);
+  if(coin()){const mx=a===2?7:4;let x,k,b,m;do{x=rnz(-4,5);k=ri(1,3);b=ri(-4,4);m=k*x+b}while(m<0||m>mx);
+   return{q:Q('Решите уравнение:',`${a}<sup>${poly([[k,X],[b,'']])}</sup> = ${a**m}`),a:x,steps:[`${a**m} = ${pw(a,m)}.`,`Приравниваем показатели: ${poly([[k,X],[b,'']])} = ${m}.`,`${poly([[k,X]])} = ${N(m-b)}, ${X} = ${N(x)}.`]}}
+  const n=ri(1,a===2?6:4);return{q:Q('Решите уравнение:',`(${F(1,a)})<sup>${X}</sup> = ${a**n}`),a:-n,steps:[`${F(1,a)} = ${a}<sup>−1</sup>, поэтому (${F(1,a)})<sup>${X}</sup> = ${a}<sup>−${X}</sup>.`,`${a**n} = ${pw(a,n)}, значит −${X} = ${n}, ${X} = ${N(-n)}.`]}}
+ if(coin()){const a=pick([2,3]);let k,pl;do{k=ri(1,a===2?3:2);pl=coin()}while(!pl&&a===2&&k===1);const c=pl?a**k+1:a**k-1,n=ri(1,a===2?5:3),C=c*a**n,op=pl?'+':'−';
+  return{q:Q('Решите уравнение:',`${a}<sup>${X} + ${k}</sup> ${op} ${a}<sup>${X}</sup> = ${C}`),a:n,steps:[`Выносим ${a}<sup>${X}</sup>: ${a}<sup>${X}</sup>(${pw(a,k)} ${op} 1) = ${C}.`,`${a}<sup>${X}</sup> · ${c} = ${C}, ${a}<sup>${X}</sup> = ${a**n}.`,`${a**n} = ${pw(a,n)}, ${X} = ${n}.`]}}
+ const n=ri(1,4),t1=2**n;let m;do m=ri(1,9);while(m===t1);const b=m-t1;
+ return{q:Q('Решите уравнение:',`4<sup>${X}</sup>${b===0?'':(b<0?' − ':' + ')+(Math.abs(b)===1?'':Math.abs(b)+' · ')+'2<sup><i>x</i></sup>'} − ${t1*m} = 0`),a:n,steps:[`Замена <i>t</i> = 2<sup>${X}</sup> > 0, тогда 4<sup>${X}</sup> = <i>t</i>².`,`${poly([[1,'<i>t</i>²'],[b,'<i>t</i>'],[-t1*m,'']])} = 0; по теореме Виета <i>t</i> = ${t1} или <i>t</i> = −${m}.`,`<i>t</i> = −${m} не подходит, так как 2<sup>${X}</sup> > 0.`,`2<sup>${X}</sup> = ${t1} = ${pw(2,n)}, ${X} = ${n}.`]}}},
+
+{id:'log',g:10,t:'Логарифмы',d:'Определение логарифма, свойства, простейшие логарифмические уравнения.',
+th:`<h3>Определение</h3><p>${lg('<i>a</i>','<i>b</i>')} — показатель степени, в которую нужно возвести <i>a</i>, чтобы получить <i>b</i> (<i>a</i> > 0, <i>a</i> ≠ 1, <i>b</i> > 0).</p><div class="rule">${lg(2,8)} = 3, так как 2<sup>3</sup> = 8 &nbsp;&nbsp; ${lg(3,F(1,9))} = −2</div>
+<h3>Свойства</h3><div class="rule"><div><i>a</i><sup>log<sub><i>a</i></sub> <i>b</i></sup> = <i>b</i> &nbsp;&nbsp; ${lg('<i>a</i>',1)} = 0 &nbsp;&nbsp; ${lg('<i>a</i>','<i>a</i>')} = 1</div><div>${lg('<i>a</i>','<i>b</i>')} + ${lg('<i>a</i>','<i>c</i>')} = ${lg('<i>a</i>','(<i>bc</i>)')}</div><div>${lg('<i>a</i>','<i>b</i>')} − ${lg('<i>a</i>','<i>c</i>')} = ${lg('<i>a</i>',F('<i>b</i>','<i>c</i>'))}</div><div>${lg('<i>a</i>','<i>b</i><sup><i>k</i></sup>')} = <i>k</i> · ${lg('<i>a</i>','<i>b</i>')}</div></div>
+<h3>Уравнения</h3><p>${lg('<i>a</i>','<i>f</i>(<i>x</i>)')} = <i>n</i> &nbsp;⇔&nbsp; <i>f</i>(<i>x</i>) = <i>a</i><sup><i>n</i></sup>. Обязательно проверяйте ОДЗ: выражение под логарифмом должно быть положительным.</p>
+<p class="note">lg — десятичный логарифм (основание 10), ln — натуральный (основание <i>e</i> ≈ 2,718).</p>`,
+gen(l){
+ if(l===1){const a=pick([2,3,4,5,10]),mx={2:7,3:5,4:3,5:3,10:4}[a];let n=ri(-2,mx);const b=n>=0?N(a**n):F(1,a**-n);
+  return{q:Q('Вычислите:',lg(a,b)),a:n,steps:[`Ищем степень, в которую нужно возвести ${a}, чтобы получить ${b}.`,n===0?`${a}<sup>0</sup> = 1, поэтому ${lg(a,1)} = 0.`:`${b} = ${a}<sup>${N(n)}</sup>, поэтому ${lg(a,b)} = ${N(n)}.`]}}
+ if(l===2){if(coin()){const[a,n]=pick([[6,2],[10,2],[10,3],[12,2],[15,2],[20,2]]),T=a**n,dv=[];for(let d=2;d<T;d++)if(T%d===0&&d!==a&&d*a!==T&&d!==a*a)dv.push(d);const b=pick(dv),c=T/b;
+   return{q:Q('Вычислите:',`${lg(a,b)} + ${lg(a,c)}`),a:n,steps:[`Сумма логарифмов с одинаковым основанием — логарифм произведения: ${lg(a,`(${b} · ${c})`)} = ${lg(a,T)}.`,`${T} = ${pw(a,n)}, поэтому ответ ${n}.`]}}
+  const a=pick([2,3,5]),n=ri(1,a===2?4:3),c=pick([3,5,6,7,10,11,12,13].filter(x=>x%a!==0||a===2&&x===6)),b=c*a**n;
+  return{q:Q('Вычислите:',`${lg(a,b)} − ${lg(a,c)}`),a:n,steps:[`Разность логарифмов — логарифм частного: ${lg(a,F(b,c))} = ${lg(a,a**n)}.`,`${a**n} = ${pw(a,n)}, поэтому ответ ${n}.`]}}
+ if(coin()){const a=pick([2,3,5]),n=ri(1,a===5?2:3),k=pick([1,2,3,-1,-2]),x=rnz(-10,10),m=a**n-k*x;
+  return{q:Q('Решите уравнение:',`${lg(a,`(${poly([[k,X],[m,'']])})`)} = ${n}`),a:x,steps:[`По определению: ${poly([[k,X],[m,'']])} = ${pw(a,n)} = ${a**n}.`,`${poly([[k,X]])} = ${a**n} − ${P(m)} = ${N(a**n-m)}, ${X} = ${N(x)}.`,`Проверка ОДЗ: выражение под логарифмом равно ${a**n} > 0.`]}}
+ const a=pick([2,3,5,7]),n=ri(1,3);let b;do b=ri(2,9);while(b===a);
+ return{q:Q('Вычислите:',`${a}<sup>${n} + log<sub>${a}</sub> ${b}</sup>`),a:a**n*b,steps:[`<i>a</i><sup><i>m</i> + <i>k</i></sup> = <i>a</i><sup><i>m</i></sup> · <i>a</i><sup><i>k</i></sup>, а ${a}<sup>log<sub>${a}</sub> ${b}</sup> = ${b} по основному логарифмическому тождеству.`,`${pw(a,n)} · ${b} = ${a**n} · ${b} = ${a**n*b}.`]}}},
+
+{id:'trig',g:10,t:'Тригонометрия',d:'Табличные значения, основное тождество, знаки по четвертям.',
+th:`<h3>Табличные значения</h3><div class="rule" style="font-size:16px"><div>sin 30° = ${F(1,2)}, &nbsp;sin 45° = ${F(S(2),2)}, &nbsp;sin 60° = ${F(S(3),2)}</div><div>cos 30° = ${F(S(3),2)}, &nbsp;cos 45° = ${F(S(2),2)}, &nbsp;cos 60° = ${F(1,2)}</div><div>tg 30° = ${F(S(3),3)}, &nbsp;tg 45° = 1, &nbsp;tg 60° = ${S(3)}</div><div>sin 90° = 1, cos 0° = 1, cos 90° = 0, cos 180° = −1, sin 270° = −1</div></div>
+<h3>Основные формулы</h3><div class="rule"><div>sin²α + cos²α = 1</div><div>tg α = ${F('sin α','cos α')} &nbsp;&nbsp; tg α · ctg α = 1</div></div>
+<h3>Знаки по четвертям</h3><ul><li>I (0; ${F('π',2)}): sin +, cos +</li><li>II (${F('π',2)}; π): sin +, cos −</li><li>III (π; ${F('3π',2)}): sin −, cos −</li><li>IV (${F('3π',2)}; 2π): sin −, cos +</li></ul>
+<p>Тангенс положителен в I и III четвертях, отрицателен во II и IV.</p>
+<h3>Однородные выражения</h3><p>Если известен tg α, выражение вида ${F('<i>a</i> sin α + <i>b</i> cos α','<i>c</i> sin α + <i>d</i> cos α')} считают, разделив числитель и знаменатель на cos α.</p>
+<p class="note">Радианы и градусы: π = 180°, поэтому ${F('π',6)} = 30°, ${F('π',4)} = 45°, ${F('π',3)} = 60°.</p>`,
+gen(l){
+ if(l===1){const T1=[['sin 30°',R(1,2)],['cos 60°',R(1,2)],['tg 45°',R(1)],['ctg 45°',R(1)],['sin 90°',R(1)],['cos 0°',R(1)],['cos 180°',R(-1)],['sin 270°',R(-1)]];let i1,i2;do{i1=ri(0,7);i2=ri(0,7)}while(i1===i2);
+  const[h1,v1]=T1[i1],[h2,v2]=T1[i2],k1=pick([2,4,6,8,10]),k2=rnz(-7,7),p1=rmul(R(k1),v1),p2=rmul(R(k2),v2),res=radd(p1,p2),a2=Math.abs(k2);
+  return{q:Q('Вычислите:',`${k1} ${h1} ${k2<0?'−':'+'} ${a2===1?'':a2+' '}${h2}`),a:rv(res),ans:rh(res),steps:[`Табличные значения: ${h1} = ${rh(v1)}, ${h2} = ${rh(v2)}.`,`${k1} · ${rhP(v1)} ${k2<0?'−':'+'} ${a2} · ${rhP(v2)} = ${rh(p1)}${sgR(p2)} = ${rh(res)}.`]}}
+ if(l===2){let[A,B,C]=pick([[3,4,5],[5,12,13],[8,15,17],[7,24,25]]);if(coin())[A,B]=[B,A];const q=ri(1,4),ss=q<=2?1:-1,cs=(q===1||q===4)?1:-1,cosv=R(cs*A,C),sinv=R(ss*B,C),tg=R(ss*B,cs*A);
+  const iv=['',`0 < α < ${F('π',2)}`,`${F('π',2)} < α < π`,`π < α < ${F('3π',2)}`,`${F('3π',2)} < α < 2π`][q],qn=['','I','II','III','IV'][q];
+  const t=ri(0,2);
+  if(t===0)return{q:Q(`Найдите sin α, если cos α = ${rh(cosv)} и ${iv}.`),a:rv(sinv),ans:rh(sinv),steps:[`sin²α = 1 − cos²α = 1 − ${F(A*A,C*C)} = ${F(B*B,C*C)}, |sin α| = ${F(B,C)}.`,`α в ${qn} четверти, там синус ${ss>0?'положителен':'отрицателен'}: sin α = ${rh(sinv)}.`]};
+  if(t===1)return{q:Q(`Найдите cos α, если sin α = ${rh(sinv)} и ${iv}.`),a:rv(cosv),ans:rh(cosv),steps:[`cos²α = 1 − sin²α = 1 − ${F(B*B,C*C)} = ${F(A*A,C*C)}, |cos α| = ${F(A,C)}.`,`α в ${qn} четверти, там косинус ${cs>0?'положителен':'отрицателен'}: cos α = ${rh(cosv)}.`]};
+  return{q:Q(`Найдите tg α, если cos α = ${rh(cosv)} и ${iv}.`),a:rv(tg),ans:rh(tg),steps:[`sin²α = 1 − ${F(A*A,C*C)} = ${F(B*B,C*C)}; в ${qn} четверти sin α = ${rh(sinv)}.`,`tg α = ${F('sin α','cos α')} = ${rh(sinv)} : ${rhP(cosv)} = ${rh(tg)}.`]}}
+ const t=rnz(-5,5);let a,b,c,d;do{a=rnz(-5,5);b=rnz(-5,5);c=rnz(-5,5);d=rnz(-5,5)}while(c*t+d===0||a*t+b===0);const res=R(a*t+b,c*t+d),s=' sin α',co=' cos α',tgv=' tg α';
+ return{q:Q(`Найдите значение выражения, если tg α = ${N(t)}:`,F(poly([[a,s],[b,co]]),poly([[c,s],[d,co]]))),a:rv(res),ans:rh(res),steps:[`Так как tg α определён, cos α ≠ 0. Делим числитель и знаменатель на cos α:`,`${F(poly([[a,tgv],[b,'']]),poly([[c,tgv],[d,'']]))} = ${F(`${N(a)} · ${P(t)}${sg(b)}`,`${N(c)} · ${P(t)}${sg(d)}`)} = ${F(N(a*t+b),N(c*t+d))}${(a*t+b===res.n&&c*t+d===res.d)?'':` = ${rh(res)}`}.`]}}},
+
+{id:'deriv',g:10,t:'Производная',d:'Правила дифференцирования, касательная, точки экстремума.',
+th:`<h3>Смысл</h3><p>Производная <i>f</i>′(${sub(X,0)}) — скорость изменения функции в точке и угловой коэффициент касательной к графику в этой точке.</p>
+<h3>Таблица и правила</h3><div class="rule"><div>(<i>C</i>)′ = 0 &nbsp;&nbsp; (<i>x</i><sup><i>n</i></sup>)′ = <i>n</i><i>x</i><sup><i>n</i> − 1</sup> &nbsp;&nbsp; (<i>kx</i> + <i>b</i>)′ = <i>k</i></div><div>(<i>u</i> ± <i>v</i>)′ = <i>u</i>′ ± <i>v</i>′ &nbsp;&nbsp; (<i>Cu</i>)′ = <i>Cu</i>′</div><div>(<i>uv</i>)′ = <i>u</i>′<i>v</i> + <i>uv</i>′</div></div>
+<div class="rule">(3${X3} − 5${X2} + 2)′ = 9${X2} − 10${X}</div>
+<h3>Касательная</h3><div class="rule">${Y} = <i>f</i>(${sub(X,0)}) + <i>f</i>′(${sub(X,0)})(${X} − ${sub(X,0)})</div>
+<h3>Возрастание, убывание, экстремумы</h3><p>Где <i>f</i>′ > 0, функция возрастает, где <i>f</i>′ < 0 — убывает. Если в точке производная меняет знак с «−» на «+», это <b>точка минимума</b>, с «+» на «−» — <b>точка максимума</b>.</p>`,
+gen(l){
+ if(l===1){const a=rnz(-5,5),b=rnz(-9,9),c=rnz(-9,9),x0=rnz(-5,5),r=2*a*x0+b;
+  return{q:Q(`Найдите <i>f</i>′(${N(x0)}), если`,`<i>f</i>(${X}) = ${poly([[a,X2],[b,X],[c,'']])}`),a:r,steps:[`<i>f</i>′(${X}) = ${poly([[2*a,X],[b,'']])}.`,`<i>f</i>′(${N(x0)}) = ${N(2*a)} · ${P(x0)}${sg(b)} = ${N(r)}.`]}}
+ if(l===2){const a=rnz(-3,3),b=rnz(-5,5),c=rnz(-9,9),d=ri(-9,9),x0=rnz(-3,3),r=3*a*x0*x0+2*b*x0+c;
+  return{q:Q(`Найдите <i>f</i>′(${N(x0)}), если`,`<i>f</i>(${X}) = ${poly([[a,X3],[b,X2],[c,X],[d,'']])}`),a:r,steps:[`(<i>x</i><sup><i>n</i></sup>)′ = <i>nx</i><sup><i>n</i> − 1</sup>, производная константы равна 0.`,`<i>f</i>′(${X}) = ${poly([[3*a,X2],[2*b,X],[c,'']])}.`,`<i>f</i>′(${N(x0)}) = ${N(3*a)} · ${P(x0)}²${sg(2*b)} · ${P(x0)}${sg(c)} = ${N(r)}.`]}}
+ if(coin()){const k=ri(1,5),c=ri(-9,9),mn=coin();
+  return{q:Q(`Найдите точку ${mn?'минимума':'максимума'} функции`,`<i>f</i>(${X}) = ${poly([[1,X3],[-3*k*k,X],[c,'']])}`),a:mn?k:-k,steps:[`<i>f</i>′(${X}) = 3${X2} − ${3*k*k}.`,`<i>f</i>′(${X}) = 0 при ${X2} = ${k*k}, ${X} = ±${k}.`,`Знаки <i>f</i>′: «+» при ${X} < −${k}, «−» между −${k} и ${k}, «+» при ${X} > ${k}.`,`В точке ${k} знак меняется с «−» на «+» — минимум; в точке −${k} — с «+» на «−», максимум.`]}}
+ const a=rnz(-3,3),b=rnz(-6,6),c=rnz(-9,9),x0=rnz(-4,4),f0=a*x0*x0+b*x0+c,k=2*a*x0+b,i0=f0-k*x0;
+ return{q:Q(`К графику функции <i>f</i>(${X}) = ${poly([[a,X2],[b,X],[c,'']])} проведена касательная в точке с абсциссой ${sub(X,0)} = ${N(x0)}. Найдите ординату точки пересечения касательной с осью O${Y}.`),a:i0,steps:[`<i>f</i>(${N(x0)}) = ${N(f0)}.`,`<i>f</i>′(${X}) = ${poly([[2*a,X],[b,'']])}, <i>f</i>′(${N(x0)}) = ${N(k)}.`,`Касательная: ${Y} = ${N(f0)} + ${P(k)}(${X} − ${P(x0)}) = ${poly([[k,X],[i0,'']])}.`,`При ${X} = 0: ${Y} = ${N(i0)}.`]}}},
+
+/* ---------- 11 класс ---------- */
+{id:'integral',g:11,t:'Интеграл',d:'Первообразная, формула Ньютона — Лейбница, площадь криволинейной фигуры.',
+th:`<h3>Первообразная</h3><p><i>F</i>(${X}) — первообразная для <i>f</i>(${X}), если <i>F</i>′(${X}) = <i>f</i>(${X}). Первообразные отличаются на постоянную <i>C</i>.</p>
+<div class="rule"><div><i>k</i> → <i>kx</i> &nbsp;&nbsp; <i>x</i><sup><i>n</i></sup> → ${F('<i>x</i><sup><i>n</i> + 1</sup>','<i>n</i> + 1')}</div><div>2${X} → ${X2} &nbsp;&nbsp; 3${X2} → ${X3}</div></div>
+<h3>Формула Ньютона — Лейбница</h3><div class="rule">${INT('<i>a</i>','<i>b</i>')}<i>f</i>(${X})<i>dx</i> = <i>F</i>(<i>b</i>) − <i>F</i>(<i>a</i>)</div>
+<div class="rule">${INT(1,3)}2${X} <i>dx</i> = 3² − 1² = 8</div>
+<h3>Площадь фигуры</h3><p>Площадь между графиками ${Y} = <i>f</i>(${X}) (сверху) и ${Y} = <i>g</i>(${X}) (снизу) на отрезке [<i>a</i>; <i>b</i>]:</p><div class="rule"><i>S</i> = ${INT('<i>a</i>','<i>b</i>')}(<i>f</i>(${X}) − <i>g</i>(${X}))<i>dx</i></div>
+<p class="note">Пределы интегрирования часто — абсциссы точек пересечения графиков. Найдите их первыми.</p>`,
+gen(l){
+ if(l===1){if(coin()){const k=ri(1,4),p=ri(0,3),q=ri(p+1,p+4),r=k*(q*q-p*p),kk=k===1?'':k+' · ';
+   return{q:Q('Вычислите:',`${INT(p,q)}${poly([[2*k,X]])} <i>dx</i>`),a:r,steps:[`Первообразная: <i>F</i>(${X}) = ${poly([[k,X2]])}.`,`<i>F</i>(${q}) − <i>F</i>(${p}) = ${kk}${q}² − ${kk}${p}² = ${k*q*q} − ${k*p*p} = ${r}.`]}}
+  const p=ri(0,2),q=ri(p+1,3);return{q:Q('Вычислите:',`${INT(p,q)}3${X2} <i>dx</i>`),a:q**3-p**3,steps:[`Первообразная: <i>F</i>(${X}) = ${X3}.`,`<i>F</i>(${q}) − <i>F</i>(${p}) = ${q}³ − ${p}³ = ${q**3} − ${p**3} = ${q**3-p**3}.`]}}
+ if(l===2){let a,b,c;do{a=ri(-2,2);b=ri(-3,3);c=ri(-5,5)}while(!a&&!b||!a&&!c||!b&&!c);const p=ri(0,1),q=ri(2,3),Fv=x=>a*x**3+b*x*x+c*x,Fq=Fv(q),Fp=Fv(p);
+  return{q:Q('Вычислите:',`${INT(p,q)}(${poly([[3*a,X2],[2*b,X],[c,'']])})<i>dx</i>`),a:Fq-Fp,steps:[`Первообразная: <i>F</i>(${X}) = ${poly([[a,X3],[b,X2],[c,X]])}.`,`<i>F</i>(${q}) = ${N(Fq)}, <i>F</i>(${p}) = ${N(Fp)}.`,`Интеграл: ${N(Fq)} − ${P(Fp)} = ${N(Fq-Fp)}.`]}}
+ if(coin()){const m=ri(1,6),r=R(m**3,6);
+  return{q:Q(`Найдите площадь фигуры, ограниченной параболой ${Y} = ${X2} и прямой ${Y} = ${poly([[m,X]])}.`),a:rv(r),ans:ansR(r),steps:[`Точки пересечения: ${X2} = ${poly([[m,X]])} ⇒ ${X} = 0 или ${X} = ${m}.`,`На [0; ${m}] прямая выше параболы: <i>S</i> = ${INT(0,m)}(${poly([[m,X]])} − ${X2})<i>dx</i>.`,`Первообразная: ${F(`${m===1?'':m}${X2}`,2)} − ${F(X3,3)}.`,`<i>S</i> = ${F(`${m} · ${m}²`,2)} − ${F(`${m}³`,3)} = ${rh(R(m**3,2))} − ${rh(R(m**3,3))} = ${rh(r)}.`]}}
+ const k=ri(1,4),r=R(4*k**3,3);
+ return{q:Q(`Найдите площадь фигуры, ограниченной параболой ${Y} = ${k*k} − ${X2} и осью O${X}.`),a:rv(r),ans:ansR(r),steps:[`Парабола пересекает ось O${X} в точках ${X} = ±${k}.`,`<i>S</i> = ${INT(-k,k)}(${k*k} − ${X2})<i>dx</i>; первообразная <i>F</i>(${X}) = ${k*k===1?'':k*k}${X} − ${F(X3,3)}.`,`<i>F</i>(${k}) − <i>F</i>(−${k}) = 2(${k**3} − ${F(k**3,3)}) = ${rh(r)}.`]}}},
+
+{id:'volume',g:11,t:'Объёмы тел',d:'Параллелепипед, куб, цилиндр, конус, пирамида, шар.',
+th:`<h3>Формулы объёмов</h3><div class="rule"><div>Прямоугольный параллелепипед: <i>V</i> = <i>abc</i>; куб: <i>V</i> = <i>a</i>³</div><div>Призма и цилиндр: <i>V</i> = ${sub('<i>S</i>','осн')} · <i>h</i>; цилиндр: <i>V</i> = π<i>r</i>²<i>h</i></div><div>Пирамида и конус: <i>V</i> = ${F(1,3)}${sub('<i>S</i>','осн')} · <i>h</i>; конус: <i>V</i> = ${F(1,3)}π<i>r</i>²<i>h</i></div><div>Шар: <i>V</i> = ${F(4,3)}π<i>r</i>³</div></div>
+<h3>Ответ «делённый на π»</h3><p>Чтобы не возиться с приближённым значением π, в задачах часто просят указать <i>V</i>/π. Например, для цилиндра с <i>r</i> = 3, <i>h</i> = 5: <i>V</i> = 45π, <i>V</i>/π = 45.</p>
+<h3>Конус: высота через образующую</h3><p>Радиус основания <i>r</i>, высота <i>h</i> и образующая <i>l</i> образуют прямоугольный треугольник: <i>h</i> = ${S('<i>l</i>² − <i>r</i>²')}.</p>
+<p class="note">Объём измеряется в кубических единицах: см³, м³. 1 л = 1 дм³.</p>`,
+gen(l){
+ if(l===1){if(coin()){const a=ri(2,15),b=ri(2,15),c=ri(2,15);return{q:Q(`Измерения прямоугольного параллелепипеда равны ${a}, ${b} и ${c}. Найдите его объём.`),a:a*b*c,steps:[`<i>V</i> = <i>abc</i> = ${a} · ${b} · ${c} = ${a*b*c}.`]}}
+  const a=ri(2,12);return{q:Q(`Найдите объём куба с ребром ${a}.`),a:a**3,steps:[`<i>V</i> = <i>a</i>³ = ${a}³ = ${a**3}.`]}}
+ if(l===2){if(coin()){const r=ri(1,10),h=ri(1,15);return{q:Q(`Радиус основания цилиндра равен ${r}, высота — ${h}. Найдите объём цилиндра, делённый на π.`),a:r*r*h,steps:[`<i>V</i> = π<i>r</i>²<i>h</i>, значит <i>V</i>/π = <i>r</i>²<i>h</i>.`,`${r}² · ${h} = ${r*r} · ${h} = ${r*r*h}.`]}}
+  const r=ri(1,9),h=3*ri(1,6);return{q:Q(`Радиус основания конуса равен ${r}, высота — ${h}. Найдите объём конуса, делённый на π.`),a:r*r*h/3,steps:[`<i>V</i> = ${F(1,3)}π<i>r</i>²<i>h</i>, значит <i>V</i>/π = ${F('<i>r</i>²<i>h</i>',3)}.`,`${F(`${r}² · ${h}`,3)} = ${F(r*r*h,3)} = ${r*r*h/3}.`]}}
+ const t=ri(0,2);
+ if(t===0){const r=ri(1,6),v=R(4*r**3,3);return{q:Q(`Радиус шара равен ${r}. Найдите объём шара, делённый на π.`),a:rv(v),ans:ansR(v),steps:[`<i>V</i> = ${F(4,3)}π<i>r</i>³, значит <i>V</i>/π = ${F('4<i>r</i>³',3)}.`,`${F(`4 · ${r**3}`,3)} = ${rh(v)}.`]}}
+ if(t===1){const[r,h,lv]=triple(30),v=R(r*r*h,3);return{q:Q(`Образующая конуса равна ${lv}, радиус основания — ${r}. Найдите объём конуса, делённый на π.`),a:rv(v),ans:ansR(v),steps:[`Высота: <i>h</i> = ${S(`${lv}² − ${r}²`)} = ${S(h*h)} = ${h}.`,`<i>V</i>/π = ${F(`${r}² · ${h}`,3)} = ${F(r*r*h,3)}${v.d===1?` = ${N(rv(v))}`:''}.`]}}
+ const a=ri(2,12),h=ri(3,15),v=R(a*a*h,3);return{q:Q(`Сторона основания правильной четырёхугольной пирамиды равна ${a}, высота — ${h}. Найдите объём пирамиды.`),a:rv(v),ans:ansR(v),steps:[`В основании квадрат: ${sub('<i>S</i>','осн')} = ${a}² = ${a*a}.`,`<i>V</i> = ${F(1,3)} · ${a*a} · ${h} = ${rh(v)}.`]}}},
+
+{id:'ineq',g:11,t:'Неравенства',d:'Линейные и квадратные неравенства, метод интервалов.',
+th:`<h3>Линейные неравенства</h3><p>Решаются как уравнения, но с одним важным правилом:</p><div class="rule">при умножении или делении на <b>отрицательное</b> число знак неравенства меняется на противоположный</div>
+<div class="rule">−3${X} + 2 > 11 &nbsp;⇒&nbsp; −3${X} > 9 &nbsp;⇒&nbsp; ${X} < −3</div>
+<h3>Квадратные неравенства</h3><p>Найдите корни трёхчлена и вспомните форму параболы. При <i>a</i> > 0 ветви направлены вверх: трёхчлен отрицателен между корнями и положителен вне их.</p>
+<div class="rule">${X2} − 5${X} + 4 ≤ 0 &nbsp;⇒&nbsp; корни 1 и 4 &nbsp;⇒&nbsp; ${X} ∈ [1; 4]</div>
+<h3>Метод интервалов</h3><p>Для дробей вида ${F(`${X} − <i>a</i>`,`${X} − <i>b</i>`)}: отметьте нули числителя и знаменателя на прямой, определите знак на каждом промежутке. Нуль знаменателя всегда «выколот» — делить на ноль нельзя.</p>
+<p class="note">Квадратная скобка [ ] означает, что конец входит в решение, круглая ( ) — не входит.</p>`,
+gen(l){
+ if(l===1){let a;do a=rnz(-6,6);while(Math.abs(a)<2);const b=rnz(-15,15),c=ri(-20,20),s0=pick(['>','≥','<','≤']),flip={'>':'<','<':'>','≥':'≤','≤':'≥'},s=a<0?flip[s0]:s0,B=R(c-b,a),fl=Math.floor(B.n/B.d),ce=Math.ceil(B.n/B.d),up=s==='>'||s==='≥';
+  const ans=s==='>'?fl+1:s==='≥'?ce:s==='<'?ce-1:fl;
+  return{q:Q(`Найдите ${up?'наименьшее':'наибольшее'} целое решение неравенства:`,`${poly([[a,X],[b,'']])} ${s0} ${N(c)}`),a:ans,steps:[`Переносим ${N(b)} вправо: ${poly([[a,X]])} ${s0} ${N(c-b)}.`,`Делим на ${P(a)}${a<0?' — число отрицательное, знак неравенства меняется':''}: ${X} ${s} ${rh(B)}.`,`${up?'Наименьшее':'Наибольшее'} целое число, удовлетворяющее условию: ${N(ans)}.`]}}
+ if(l===2){const r1=ri(-6,5),r2=r1+ri(2,8),s=coin()?'≤':'<',p=-(r1+r2),q=r1*r2,ints=[];for(let i=r1;i<=r2;i++)if(s==='≤'||i!==r1&&i!==r2)ints.push(N(i));
+  return{q:Q('Сколько целых решений имеет неравенство?',`${poly([[1,X2],[p,X],[q,'']])} ${s} 0`),a:ints.length,steps:[`Корни трёхчлена: ${X} = ${N(r1)} и ${X} = ${N(r2)} (по Виета: сумма ${N(r1+r2)}, произведение ${N(q)}).`,`Ветви параболы направлены вверх, поэтому трёхчлен ${s==='≤'?'неположителен':'отрицателен'} между корнями: ${X} ∈ ${s==='≤'?'[':'('}${N(r1)}; ${N(r2)}${s==='≤'?']':')'}.`,`Целые решения: ${ints.join('; ')}. Их ${ints.length}.`]}}
+ let a,b;do{a=ri(-6,6);b=ri(-6,6)}while(Math.abs(a-b)<2||Math.abs(a-b)>8);const s=coin()?'≤':'<',lo=Math.min(a,b),hi=Math.max(a,b),ints=[];for(let i=lo;i<=hi;i++)if(i!==b&&(i!==a||s==='≤'))ints.push(N(i));
+ const iv=a<b?`${s==='≤'?'[':'('}${N(a)}; ${N(b)})`:`(${N(b)}; ${N(a)}${s==='≤'?']':')'}`;
+ return{q:Q('Сколько целых решений имеет неравенство?',`${F(`${X}${sg(-a)}`,`${X}${sg(-b)}`)} ${s} 0`),a:ints.length,steps:[`Нуль числителя: ${X} = ${N(a)}; нуль знаменателя: ${X} = ${N(b)} (эта точка выколота).`,`Дробь отрицательна, когда числитель и знаменатель разных знаков, то есть между ${N(lo)} и ${N(hi)}.`,`Решение: ${X} ∈ ${iv}.`,`Целые решения: ${ints.join('; ')}. Их ${ints.length}.`]}}},
+
+{id:'word',g:11,t:'Текстовые задачи',d:'Движение, совместная работа, смеси и растворы, движение по реке.',
+th:`<h3>Движение</h3><div class="rule"><i>s</i> = <i>v</i> · <i>t</i> &nbsp;&nbsp; навстречу: ${sub('<i>v</i>','сбл')} = ${sub('<i>v</i>',1)} + ${sub('<i>v</i>',2)} &nbsp;&nbsp; вдогонку: ${sub('<i>v</i>','сбл')} = ${sub('<i>v</i>',1)} − ${sub('<i>v</i>',2)}</div>
+<p>По реке: по течению скорость <i>v</i> + <i>u</i>, против течения — <i>v</i> − <i>u</i>, где <i>u</i> — скорость течения.</p>
+<h3>Совместная работа</h3><p>Всю работу принимают за 1. Если один выполняет её за <i>a</i> ч, его производительность ${F(1,'<i>a</i>')} работы в час. Производительности при совместной работе складываются.</p><div class="rule"><i>t</i> = 1 : (${F(1,'<i>a</i>')} + ${F(1,'<i>b</i>')}) = ${F('<i>ab</i>','<i>a</i> + <i>b</i>')}</div>
+<h3>Смеси и растворы</h3><p>Масса вещества = масса раствора × концентрация. При смешивании складываются массы вещества и массы растворов.</p>
+<h3>Общий план</h3><ol><li>Обозначьте неизвестное буквой.</li><li>Выразите через него остальные величины (удобно в таблице).</li><li>Составьте уравнение и решите его.</li><li>Проверьте, подходит ли корень по смыслу задачи.</li></ol>`,
+gen(l){
+ if(l===1){if(coin()){const t=ri(2,6),v1=ri(4,9)*10,v2=ri(4,9)*10,Sd=(v1+v2)*t;
+   return{q:Q(`Из двух городов, расстояние между которыми ${Sd} км, одновременно навстречу друг другу выехали два автомобиля со скоростями ${v1} км/ч и ${v2} км/ч. Через сколько часов они встретятся?`),a:t,steps:[`Скорость сближения: ${v1} + ${v2} = ${v1+v2} км/ч.`,`<i>t</i> = ${Sd} : ${v1+v2} = ${t} ч.`]}}
+  const t=ri(2,6);let v1,v2;do{v1=ri(5,12)*5;v2=ri(2,10)*5}while(v1<=v2);const d=(v1-v2)*t;
+  return{q:Q(`Велосипедист едет со скоростью ${v2} км/ч. Вслед за ним из той же точки, когда расстояние между ними было ${d} км, выехал мотоциклист со скоростью ${v1} км/ч. Через сколько часов мотоциклист догонит велосипедиста?`),a:t,steps:[`Скорость сближения при движении вдогонку: ${v1} − ${v2} = ${v1-v2} км/ч.`,`<i>t</i> = ${d} : ${v1-v2} = ${t} ч.`]}}
+ if(l===2){if(coin()){const[a,b]=pick([[3,6],[4,12],[6,12],[10,15],[12,24],[20,30],[6,30],[5,20],[12,36],[15,30],[24,40]]),t=a*b/(a+b),sm=R(a+b,a*b);
+   return{q:Q(`Первая труба наполняет бассейн за ${a} ч, вторая — за ${b} ч. За сколько часов наполнят бассейн обе трубы, работая вместе?`),a:t,steps:[`Объём бассейна примем за 1. Производительности: ${F(1,a)} и ${F(1,b)} бассейна в час.`,`Вместе: ${F(1,a)} + ${F(1,b)} = ${rh(sm)} бассейна в час.`,`Время: 1 : ${rh(sm)} = ${t} ч.`]}}
+  let m1,m2,p1,p2;do{m1=ri(1,9);m2=ri(1,9);p1=ri(1,12)*5;p2=ri(1,12)*5}while(p1===p2||((m1*p1+m2*p2)*100)%(m1+m2));const salt=(m1*p1+m2*p2)/100,res=(m1*p1+m2*p2)/(m1+m2);
+  return{q:Q(`Смешали ${m1} кг ${p1}-процентного раствора соли и ${m2} кг ${p2}-процентного раствора соли. Какова концентрация (в процентах) получившегося раствора?`),a:res,steps:[`Соли в первом растворе: ${m1} · ${N(p1/100)} = ${N(m1*p1/100)} кг, во втором: ${m2} · ${N(p2/100)} = ${N(m2*p2/100)} кг.`,`Всего соли ${N(salt)} кг, масса смеси ${m1+m2} кг.`,`Концентрация: ${N(salt)} : ${m1+m2} · 100% = ${N(res)}%.`]}}
+ let v,c,s,T;do{v=ri(8,20);c=ri(1,4);const L=lcm(v+c,v-c);s=L*ri(1,3);T=s/(v+c)+s/(v-c)}while(s>300);const D4=s*s+T*T*c*c,sd=T*v-s;
+ return{q:Q(`Моторная лодка прошла ${s} км по течению реки и вернулась обратно, затратив на весь путь ${T} ч. Скорость течения ${c} км/ч. Найдите собственную скорость лодки (в км/ч).`),a:v,steps:[`Пусть ${X} км/ч — собственная скорость лодки. По течению: ${X} + ${c}, против течения: ${X} − ${c}.`,`${F(s,`${X} + ${c}`)} + ${F(s,`${X} − ${c}`)} = ${T}.`,`Умножаем на (${X} + ${c})(${X} − ${c}): ${s}(${X} − ${c}) + ${s}(${X} + ${c}) = ${T}(${X2} − ${c*c}).`,`${poly([[T,X2],[-2*s,X],[-T*c*c,'']])} = 0.`,`<i>D</i>/4 = ${s}² + ${T} · ${T*c*c} = ${D4} = ${sd}²; ${X} = ${F(`${s} + ${sd}`,T)} = ${v} (второй корень отрицательный и не подходит).`]}}},
+];
+const TOPIC={};TOPICS.forEach((t,i)=>{TOPIC[t.id]=t});
+const GRADES=[5,6,7,8,9,10,11];
+const LV=[{n:1,name:'Базовый',desc:'Понять правило и применить его в простых примерах'},{n:2,name:'Средний',desc:'Типовые задачи, как на школьных контрольных'},{n:3,name:'Продвинутый',desc:'Несколько шагов и нестандартные формулировки'}];
+const NEED=5;
+
+/* ================= хранилище ================= */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let progress=store.get('shm.progress.v1',{});if(!progress||typeof progress!=='object')progress={};
+const prog=id=>{const p=progress[id];return Array.isArray(p)?p:[0,0,0]};
+const done=(id,l)=>prog(id)[l-1]>=NEED;
+function bump(id,l){const p=prog(id).slice();p[l-1]=Math.min(NEED,(p[l-1]||0)+1);progress[id]=p;store.set('shm.progress.v1',progress)}
+const masteredCount=list=>list.reduce((s,t)=>s+[1,2,3].filter(l=>done(t.id,l)).length,0);
+
+/* ================= тема ================= */
+const root=document.documentElement;
+function setTheme(t){if(t==='light'||t==='dark')root.setAttribute('data-theme',t);else root.removeAttribute('data-theme');try{localStorage.setItem('shm.theme',t)}catch(e){}
+ document.querySelectorAll('.theme button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)))}
+document.querySelectorAll('.theme button').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.t)));
+(function(){let t='auto';try{t=localStorage.getItem('shm.theme')||'auto'}catch(e){}setTheme(t)})();
+
+/* ================= разметка ================= */
+const app=document.getElementById('app');
+const pill=(id,l)=>{const c=Math.min(prog(id)[l-1],NEED),d=c>=NEED;return`<span class="pill l${l}${d?' done':''}"><span class="dot" aria-hidden="true"></span>${LV[l-1].name} ${d?'✓<span class="sr"> освоен</span>':`${c}/${NEED}`}</span>`};
+const pills=id=>`<div class="pills">${[1,2,3].map(l=>pill(id,l)).join('')}</div>`;
+
+function renderHome(g){
+ store.set('shm.grade',g);
+ const list=TOPICS.filter(t=>t.g===g),all=masteredCount(TOPICS),total=TOPICS.length*3;
+ const lvCounts=[1,2,3].map(l=>TOPICS.filter(t=>done(t.id,l)).length);
+ document.title='Математика в клетку';
+ app.innerHTML=`
+ <section class="hero">
+  <div><h1>Школьная математика<br>по полочкам</h1><p class="lead">Выберите класс и тему. В каждой теме — понятная теория, разобранные примеры и тренажёр на трёх уровнях сложности с бесконечным запасом задач.</p></div>
+  <div class="sheet summary" aria-label="Общий прогресс">
+   <div class="big">${all} <span>из ${total}</span></div>
+   <div>уровней освоено</div>
+   <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${all}" aria-label="Освоено уровней"><i style="width:${all/total*100}%"></i></div>
+   <div class="legend">${[1,2,3].map(l=>`<span class="pill l${l}"><span class="dot" aria-hidden="true"></span>${LV[l-1].name}: ${lvCounts[l-1]}/${TOPICS.length}</span>`).join('')}</div>
+  </div>
+ </section>
+ <nav aria-label="Классы"><ul class="grades">${GRADES.map(n=>{const ts=TOPICS.filter(t=>t.g===n);return`<li><a href="#/grade/${n}"${n===g?' aria-current="page"':''}><b>${n}</b><small>класс · ${masteredCount(ts)}/${ts.length*3}</small></a></li>`}).join('')}</ul></nav>
+ <h2 style="margin-bottom:14px">${g} класс</h2>
+ <div class="cards">${list.map((t,i)=>`<a class="card sheet" href="#/topic/${t.id}"><span class="num">§${i+1}</span><h3>${t.t}</h3><p>${t.d}</p>${pills(t.id)}</a>`).join('')}</div>`;
+}
+
+const exCache={};
+function examples(t){if(!exCache[t.id])exCache[t.id]=[1,2].map(l=>withSeed(hashStr(t.id+':ex'+l),()=>t.gen(l)));return exCache[t.id]}
+const solHTML=p=>`<ol class="sol">${p.steps.map(s=>`<li><span>${s}</span></li>`).join('')}</ol><div class="answer">Ответ: <span class="m">${p.ans||N(p.a)}</span></div>`;
+
+/* состояние тренажёра */
+const TS={topic:null,level:1,p:null,tries:0,shown:false,solved:false};
+function newProblem(){TS.p=TOPIC[TS.topic].gen(TS.level);TS.tries=0;TS.shown=false;TS.solved=false}
+
+function renderTopic(id,tab,level){
+ const t=TOPIC[id],idx=TOPICS.filter(x=>x.g===t.g).indexOf(t)+1;
+ if(!['theory','examples','practice'].includes(tab))tab='theory';
+ document.title=`${t.t} — Математика в клетку`;
+ const tabs=[['theory','Теория'],['examples','Примеры'],['practice','Тренажёр']];
+ let body='';
+ if(tab==='theory')body=`<article class="sheet theory content">${t.th}</article><div class="next"><a class="btn" href="#/topic/${id}/examples">Посмотреть примеры →</a></div>`;
+ else if(tab==='examples'){const ex=examples(t);body=`<div class="examples content">${ex.map((p,i)=>`<article class="sheet ex"><div class="tag">Пример ${i+1} <span class="pill l${i+1}">${LV[i].name} уровень</span></div><div class="task">${p.q}</div><h3 class="sr">Решение</h3>${solHTML(p)}</article>`).join('')}</div><div class="next"><a class="btn" href="#/topic/${id}/practice">Перейти к тренажёру →</a></div>`}
+ else{
+  const lv=level||(TS.topic===id?TS.level:([1,2,3].find(l=>!done(id,l))||1));
+  if(TS.topic!==id||TS.level!==lv||!TS.p){TS.topic=id;TS.level=lv;newProblem()}
+  body=`<div class="levels" role="group" aria-label="Уровень сложности">${LV.map(L=>{const c=Math.min(prog(id)[L.n-1],NEED);return`<a class="lvl l${L.n}" href="#/topic/${id}/practice/${L.n}" aria-current="${L.n===lv}"><span class="ln">${L.name}${c>=NEED?' <span>✓ освоен</span>':''}</span><small>${L.desc}</small><span class="dots" aria-label="Верно с первой попытки: ${c} из ${NEED}">${Array.from({length:NEED},(_,i)=>`<i class="${i<c?'on':''}"></i>`).join('')}</span></a>`}).join('')}</div><div id="trainer" class="content"></div>`;
+ }
+ app.innerHTML=`<nav class="crumbs" aria-label="Навигация"><a href="#/">Главная</a><span aria-hidden="true">/</span><a href="#/grade/${t.g}">${t.g} класс</a><span aria-hidden="true">/</span><span>${t.t}</span></nav>
+ <div class="topic-head"><h1>${t.t}</h1>${pills(id)}</div>
+ <nav class="tabs" aria-label="Разделы темы">${tabs.map(([k,n])=>`<a href="#/topic/${id}/${k}"${k===tab?' aria-current="page"':''}>${n}</a>`).join('')}</nav>${body}`;
+ if(tab==='practice')renderTrainer();
+}
+
+function renderTrainer(){
+ const box=document.getElementById('trainer');if(!box)return;
+ const p=TS.p,L=LV[TS.level-1];
+ box.innerHTML=`<section class="sheet prob" aria-labelledby="ptitle">
+  <div class="prob-top"><h2 id="ptitle" style="font-size:30px">Задача</h2><span class="pill l${TS.level}">${L.name} уровень</span></div>
+  <div class="task">${p.q}</div>
+  <form class="ans" id="ansform" novalidate>
+   <div class="field"><label for="answer">Ваш ответ</label>
+    <input id="answer" autocomplete="off" spellcheck="false" autocapitalize="off" inputmode="text" ${TS.solved?'disabled':''} aria-describedby="anshint fb">
+    <div class="keys" aria-label="Вставить символ">${['−','/',','].map(k=>`<button type="button" data-k="${k}" ${TS.solved?'disabled':''} aria-label="Вставить ${k==='−'?'минус':k==='/'?'дробную черту':'запятую'}">${k}</button>`).join('')}</div>
+    <span class="hint" id="anshint">Целое число, десятичная дробь (0,75) или обыкновенная (3/4, 1 1/2)</span></div>
+   <button class="btn" type="submit" ${TS.solved?'disabled':''}>Проверить</button>
+  </form>
+  <div id="fb" class="fb" aria-live="polite"></div>
+  <div class="actions">
+   <button class="btn ghost" type="button" id="showsol" ${TS.shown?'disabled':''}>Показать решение</button>
+   <button class="btn ${TS.solved||TS.shown?'':'ghost'}" type="button" id="nextp">Следующая задача →</button>
+  </div>
+  <div id="solbox" class="solbox" ${TS.shown?'':'hidden'}><h3>Решение</h3>${solHTML(p)}</div>
+ </section>`;
+ const inp=box.querySelector('#answer'),fb=box.querySelector('#fb');
+ box.querySelectorAll('.keys button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k,s=inp.selectionStart??inp.value.length,e=inp.selectionEnd??s;inp.value=inp.value.slice(0,s)+k+inp.value.slice(e);inp.focus();inp.setSelectionRange(s+1,s+1)}));
+ box.querySelector('#ansform').addEventListener('submit',ev=>{ev.preventDefault();check(inp,fb)});
+ box.querySelector('#showsol').addEventListener('click',()=>{TS.shown=true;renderTrainer();const sb=document.getElementById('solbox');sb.scrollIntoView({behavior:'smooth',block:'nearest'});document.getElementById('nextp').focus()});
+ box.querySelector('#nextp').addEventListener('click',()=>{newProblem();renderTrainer();document.getElementById('answer').focus()});
+}
+
+function parseAns(s){
+ s=s.trim().replace(/[−–—]/g,'-').replace(/,/g,'.').replace(/\s+/g,' ').replace(/\s*\/\s*/g,'/').replace(/^([+-])\s+/,'$1');
+ if(!s)return null;let m;
+ if(/^[+-]?\d{1,3}( \d{3})+(\.\d+)?$/.test(s))s=s.replace(/ /g,'');
+ if(/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s))return parseFloat(s);
+ if(m=s.match(/^([+-]?)(\d+) (\d+)\/(\d+)$/)){if(+m[4]===0)return NaN;const v=+m[2]+ +m[3]/+m[4];return m[1]==='-'?-v:v}
+ if(m=s.match(/^([+-]?\d+(?:\.\d+)?)\/([+-]?\d+(?:\.\d+)?)$/)){if(+m[2]===0)return NaN;return+m[1]/+m[2]}
+ return NaN}
+const same=(u,a)=>Math.abs(u-a)<=1e-9*Math.max(1,Math.abs(a));
+
+function check(inp,fb){
+ if(TS.solved)return;
+ const v=parseAns(inp.value);
+ if(v===null){fb.className='fb info';fb.textContent='Введите ответ в поле выше.';inp.focus();return}
+ if(Number.isNaN(v)){fb.className='fb info';fb.textContent='Не получилось прочитать ответ. Пример записи: 12, −3, 0,75, 3/4 или 1 1/2.';inp.setAttribute('aria-invalid','true');inp.focus();return}
+ inp.removeAttribute('aria-invalid');
+ if(same(v,TS.p.a)){
+  const first=TS.tries===0&&!TS.shown,was=done(TS.topic,TS.level);TS.solved=true;
+  if(first)bump(TS.topic,TS.level);
+  const nowDone=done(TS.topic,TS.level),c=Math.min(prog(TS.topic)[TS.level-1],NEED);
+  const val=inp.value;renderTopic(TS.topic,'practice',TS.level);
+  const i2=document.getElementById('answer'),f2=document.getElementById('fb');i2.value=val;
+  f2.className='fb ok';
+  f2.textContent=first?(nowDone&&!was?`Верно! Уровень «${LV[TS.level-1].name}» освоен.`:`Верно с первой попытки! Засчитано: ${c} из ${NEED}.`):'Верно! Эта задача не засчитывается в прогресс, потому что была ошибка или открыто решение.';
+  document.getElementById('nextp').focus();
+ }else{TS.tries++;fb.className='fb bad';fb.textContent=`Неверно. Попробуйте ещё раз или откройте пошаговое решение.`;inp.select()}
+}
+
+/* ================= маршрутизация ================= */
+let lastView='';
+function route(){
+ const parts=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean);let view;
+ if(parts[0]==='topic'&&TOPIC[parts[1]]){renderTopic(parts[1],parts[2]||'theory',[1,2,3].includes(+parts[3])?+parts[3]:null);view='t:'+parts[1]+':'+(parts[2]||'theory')}
+ else{let g=+parts[1];if(parts[0]!=='grade'||!GRADES.includes(g))g=GRADES.includes(+store.get('shm.grade',5))?+store.get('shm.grade',5):5;renderHome(g);view='h'}
+ if(view!==lastView){if(lastView)window.scrollTo(0,0);lastView=view}
+ renderReset();
+}
+function renderReset(){const el=document.getElementById('reset');el.innerHTML=`<button class="linkbtn" type="button" id="rst">Сбросить прогресс</button>`;
+ el.querySelector('#rst').addEventListener('click',()=>{el.innerHTML=`<span class="confirm">Удалить весь прогресс? <button class="linkbtn" type="button" id="rsy">Да, сбросить</button><button class="linkbtn" type="button" id="rsn">Отмена</button></span>`;
+  el.querySelector('#rsy').addEventListener('click',()=>{progress={};store.set('shm.progress.v1',progress);route()});el.querySelector('#rsn').addEventListener('click',renderReset);el.querySelector('#rsn').focus()})}
+window.addEventListener('hashchange',route);
+route();
+</script>
+</body>
+</html>
